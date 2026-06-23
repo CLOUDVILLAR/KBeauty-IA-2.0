@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-dotenv
+psycopg2-binary
+requests
+PyJWT
+python-multipart
+openai
+Pillow
+pillow-heif

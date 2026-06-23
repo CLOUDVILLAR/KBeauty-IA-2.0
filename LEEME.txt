@@ -1,0 +1,27 @@
+PARCHE FLUTTER KBEAUTY SSO - FIX COMPILACION
+
+Reemplaza estos archivos en tu proyecto Flutter:
+
+1. pubspec.yaml
+2. lib/config/config.dart
+3. lib/servicios/servicio_auth.dart
+4. android/app/src/main/AndroidManifest.xml
+
+Este parche corrige:
+- nombreToken no definido
+- nombreRefreshToken no definido
+- nombreVillarId no definido
+- crearUrl no definido
+- tiempoEsperaApi no definido
+- rutas de perfil/analisis/rutinas/evolucion no definidas
+- cerrarSesion no definido
+- obtenerUsuarioActual no definido
+
+Luego ejecuta:
+
+flutter clean
+flutter pub get
+flutter run --dart-define=URL_API=http://TU_IP_PC:8000 --dart-define=URL_VILLAR_DO=http://TU_IP_PC:8100
+
+Para emulador Android:
+flutter run --dart-define=URL_API=http://10.0.2.2:8000 --dart-define=URL_VILLAR_DO=http://10.0.2.2:8100

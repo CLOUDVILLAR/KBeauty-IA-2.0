@@ -1,0 +1,27 @@
+name: kbeaty_ia_v2
+description: App movil KBeauty IA conectada a la API de analisis de piel.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: any
+  http: any
+  image_picker: any
+  file_selector: any
+  flutter_secure_storage: any
+  intl: any
+  url_launcher: any
+  app_links: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: any
+
+flutter:
+  uses-material-design: true

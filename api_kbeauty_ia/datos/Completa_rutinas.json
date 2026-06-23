@@ -1,0 +1,1813 @@
+{
+  "version": 1,
+  "descripcion": "Rutina diferentes tipos de pieles. Organizado por tipo/condición de piel y por momento (mañana/noche), incluyendo opcionales y frecuencias. No se modifica la descripción de uso de los productos.",
+  "rutinas_por_piel": [
+
+
+
+   {
+  "nombre": "Melasma en piel normal",
+  "tipo_piel": "seca",
+  "condicion": "melasma",
+  "rutina": {
+    "mañana": [
+     
+    ],
+
+    "día": [
+       {
+        "id_odoo": 22519,
+        "nombre_producto": "TOCOBO Calamine Pore Control Cleansing Oil 200ml",
+        "categoria": "limpiador",
+        "subtipo": "cleansing_oil",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Aplicar una cantidad adecuada sobre el rostro seco y distribuir de manera uniforme. Humedecer el rostro para emulsionar el aceite y enjuagar con agua. En zonas con mayor presencia de sebo, como la zona T y U, masajear con mayor detenimiento para ayudar a disolver el exceso de grasa."
+        }
+      },
+      {
+        "id_odoo": 22518,
+        "nombre_producto": "TOCOBO Coconut Clay Cleansing Foam 150ml",
+        "categoria": "limpiador",
+        "subtipo": "foam_cleanser",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Colocar una cantidad similar al tamaño de una moneda en las palmas húmedas y hacer espuma. Masajear suavemente sobre el rostro y enjuagar completamente con agua."
+        }
+      },
+       {
+        "id_odoo": 22593,
+        "nombre_producto": "TIRTIR MILK SKIN TONER",
+        "categoria": "tonico",
+        "subtipo": "milk_toner",
+        "uso": { "paso_rutina": "tonificación" },
+        "descripcion_rutina": {
+          "día": "Después de la limpieza, aplicar el tónico sobre el rostro. En pieles secas o normales, puede aplicarse en dos capas dejando que se absorba entre cada una para aportar hidratación profunda y confort."
+        }
+      },
+      {
+        "id_odoo": 22658,
+        "nombre_producto": "MEDICUBE TXA NIACINAMIDE 15 SERUM 30ml",
+        "categoria": "tratamiento",
+        "subtipo": "serum",
+        "uso": { "paso_rutina": "tratamiento" },
+        "descripcion_rutina": {
+          "día": "Aplicar una cantidad generosa en el área deseada después de aplicar el tónico. Distribuir suavemente hasta su completa absorción y continuar con la crema hidratante y el protector solar."
+        }
+      },
+     
+       {
+        "id_odoo": 22660,
+        "nombre_producto": "MEDICUBE PDRN PINK COLLAGEN CAPSULE CREAM",
+        "categoria": "hidratante",
+        "subtipo": "Gel_hidratante",
+        "uso": { "paso_rutina": "hidratación" },
+        "descripcion_rutina": {
+          "día": "Mezclar las cápsulas rosadas con el gel transparente y aplicar en rostro y cuello para hidratar y aportar elasticidad y luminosidad, ayudando a mejorar el tono desigual y la apariencia de manchas."
+        }
+      },
+      {
+        "id_odoo": 22521,
+        "nombre_producto": "TOCOBO CICA CALMING SUN SERUM 50ML SPF50+ PA+++",
+        "categoria": "protector_solar",
+        "subtipo": "sun_serum",
+        "uso": { "paso_rutina": "protección_solar" },
+        "descripcion_rutina": {
+          "día": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada de manera uniforme sobre el rostro. Protector solar químico con SPF50+ PA++++ de textura ligera, no comedogénica y no pegajosa, formulado con centella asiática, aloe vera y complejo de ácido hialurónico para ayudar a calmar la piel, aportar hidratación y protegerla de los rayos solares."
+        }
+      },
+    
+      {
+        "id_odoo": 22589,
+        "nombre_producto": "TIRTIR MASK FIT RED CUSHION 24N LATTE",
+        "categoria": "maquillaje",
+        "subtipo": "cushion_foundation",
+        "uso": { "paso_rutina": "maquillaje" },
+        "descripcion_rutina": {
+          "día": "Después de completar la rutina de cuidado de la piel, presionar ligeramente la borla incluida sobre el cushion para tomar una pequeña cantidad de producto. Retirar el exceso en la tapa y aplicar dando suaves toques sobre el rostro, enfocándose en las zonas que requieran mayor cobertura como enrojecimiento o imperfecciones. Construir en capas finas hasta obtener el nivel de cobertura deseado."
+        }
+      }
+    ],
+
+    "noche": [
+      {
+        "id_odoo": 22519,
+        "nombre_producto": "TOCOBO Calamine Pore Control Cleansing Oil 200ml",
+        "categoria": "limpiador",
+        "subtipo": "cleansing_oil",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "noche": "Aplicar una cantidad adecuada sobre el rostro seco y distribuir de manera uniforme. Humedecer el rostro para emulsionar el aceite y enjuagar con agua. En zonas con mayor presencia de sebo, como la zona T y U, masajear con mayor detenimiento para ayudar a disolver el exceso de grasa."
+        }
+      },
+      {
+        "id_odoo": 22518,
+        "nombre_producto": "TOCOBO Coconut Clay Cleansing Foam 150ml",
+        "categoria": "limpiador",
+        "subtipo": "foam_cleanser",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "noche": "Colocar una cantidad similar al tamaño de una moneda en las palmas húmedas y hacer espuma. Masajear suavemente sobre el rostro y enjuagar completamente con agua."
+        }
+      },
+      {
+        "id_odoo": 22609,
+        "nombre_producto": "HEIMISH RX RETINOL BAKUCHIOL BOOSTER OIL",
+        "categoria": "tratamiento",
+        "subtipo": "facial_oil",
+        "uso": { "paso_rutina": "tratamiento" },
+        "frecuencia": "una noche si una noche no",
+        "descripcion_rutina": {
+          "noche": "Durante las primeras dos semanas de uso, aplicar una capa fina del aceite sobre el rostro y el cuello una vez cada dos días. A partir de la tercera semana, aplicar una vez al día durante la rutina nocturna de cuidado de la piel. Puede utilizarse solo o mezclado con el sérum o la crema."
+        }
+      },
+      {
+        "id_odoo": 22662,
+        "nombre_producto": "MEDICUBE PDRN PINK COLLAGEN GEL MASK (4EA)",
+        "categoria": "tratamiento",
+        "subtipo": "gel_mask",
+        "uso": { "paso_rutina": "mascarilla" },
+        "frecuencia": "una vez por semana",
+        "descripcion_rutina": {
+          "noche": "Después de la limpieza, colocar la mascarilla sobre el rostro evitando el área de los ojos y los labios. Dejar actuar entre 1 y 3 horas y retirar. Dar suaves toques con la esencia restante para facilitar su absorción."
+        }
+      },
+      {
+  "id_odoo": 22516,
+  "nombre_producto": "TOCOBO Collagen Brightening Eye Gel Cream",
+  "categoria": "tratamiento",
+  "subtipo": "eye_gel_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "Aplicar una cantidad moderada de la crema en gel para ojos sobre el área del contorno y extender suavemente para ayudar a la absorción."
+  }
+},
+
+
+{
+  "id_odoo": 22516,
+  "nombre_producto": "MEDICUBE PDRN Pink Peptide Eye Cream 30ml",
+  "categoria": "tratamiento",
+  "subtipo": "eye_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "En la última etapa de la rutina de skincare, aplicar una cantidad moderada en el área del contorno de ojos. Dar suaves toques para favorecer la absorción. Fórmula con PDRN de salmón, retinol y péptidos que ayuda a suavizar líneas finas, mejorar la firmeza, reducir la apariencia de ojeras y desinflamar la zona, mientras niacinamida, cafeína y extracto de cúrcuma aportan hidratación y luminosidad."
+  }
+    }
+      ]
+        }
+          },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  {
+  "nombre": "Piel grasa con melasma",
+  "tipo_piel": "grasa",
+  "condicion": "melasma",
+  "rutina": {
+    "mañana": [
+      {
+        "id_odoo": 22612,
+        "nombre_producto": "heimish Matcha Biome Amino Acne Cleansing Foam",
+        "categoria": "limpieza",
+        "subtipo": "cleansing_foam",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "mañana": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro con movimientos circulares. Enjuagar con agua para eliminar impurezas y exceso de sebo."
+        }
+      }
+    ],
+
+    "día": [
+      {
+        "id_odoo": 22658,
+        "nombre_producto": "MEDICUBE TXA NIACINAMIDE 15 SERUM 30ml",
+        "categoria": "tratamiento",
+        "subtipo": "serum",
+        "uso": { "paso_rutina": "tratamiento" },
+        "descripcion_rutina": {
+          "día": "Aplicar una cantidad generosa en el área deseada después de aplicar el tónico. Distribuir suavemente hasta su completa absorción y continuar con la crema hidratante y el protector solar."
+        }
+      },
+      {
+        "id_odoo": 22656,
+        "nombre_producto": "MEDICUBE PDRN PINK PEPTIDE SERUM 30ml",
+        "categoria": "tratamiento",
+        "subtipo": "serum",
+        "uso": { "paso_rutina": "tratamiento" },
+        "descripcion_rutina": {
+          "día": "Aplicar de 4 a 5 gotas sobre el rostro limpio y tonificado, mañana y noche. Masajear suavemente hasta su completa absorción. Puede utilizarse antes de la crema hidratante o mezclado con la base de maquillaje para un acabado luminoso."
+        }
+      },
+      {
+        "id_odoo": 22520,
+        "nombre_producto": "TOCOBO COTTON SOFT SUN STICK SPF50+ PA+++",
+        "categoria": "protector_solar",
+        "subtipo": "sun_stick",
+        "uso": { "paso_rutina": "protección_solar" },
+        "descripcion_rutina": {
+          "día": "protector solar en barra que ayuda a controlar la grasa dejando así un acabado matificante, se puede retocar cada 4 horas, aplicar como paso final de la rutina de skinker en todo el rostros"
+        }
+      },
+      {
+        "id_odoo": 22589,
+        "nombre_producto": "TIRTIR MASK FIT RED CUSHION 24N LATTE",
+        "categoria": "maquillaje",
+        "subtipo": "cushion_foundation",
+        "uso": { "paso_rutina": "maquillaje" },
+        "descripcion_rutina": {
+          "día": "Después de completar la rutina de cuidado de la piel, presionar ligeramente la borla incluida sobre el cushion para tomar una pequeña cantidad de producto. Retirar el exceso en la tapa y aplicar dando suaves toques sobre el rostro, enfocándose en las zonas que requieran mayor cobertura como enrojecimiento o imperfecciones. Construir en capas finas hasta obtener el nivel de cobertura deseado."
+        }
+      }
+    ],
+
+    "noche": [
+      {
+        "id_odoo": 22613,
+        "nombre_producto": "heimish All Clean Balm",
+        "categoria": "limpieza",
+        "subtipo": "cleansing_balm",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "noche": "Con el rostro seco, tomar una cantidad moderada del bálsamo utilizando la espátula y masajear suavemente todo el rostro con las manos secas para disolver maquillaje, protector solar e impurezas. Añadir un poco de agua para emulsionar el producto y enjuagar completamente con agua."
+        }
+      },
+      {
+        "id_odoo": 22612,
+        "nombre_producto": "heimish Matcha Biome Amino Acne Cleansing Foam",
+        "categoria": "limpieza",
+        "subtipo": "cleansing_foam",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "noche": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro con movimientos circulares. Enjuagar con agua para eliminar impurezas y exceso de sebo."
+        }
+      },
+      {
+        "id_odoo": 22609,
+        "nombre_producto": "HEIMISH RX RETINOL BAKUCHIOL BOOSTER OIL",
+        "categoria": "tratamiento",
+        "subtipo": "facial_oil",
+        "uso": { "paso_rutina": "tratamiento" },
+        "frecuencia": "una noche si una noche no",
+        "descripcion_rutina": {
+          "noche": "Durante las primeras dos semanas de uso, aplicar una capa fina del aceite sobre el rostro y el cuello una vez cada dos días. A partir de la tercera semana, aplicar una vez al día durante la rutina nocturna de cuidado de la piel. Puede utilizarse solo o mezclado con el sérum o la crema."
+        }
+      },
+      {
+        "id_odoo": 22656,
+        "nombre_producto": "MEDICUBE PDRN PINK PEPTIDE SERUM 30ml",
+        "categoria": "tratamiento",
+        "subtipo": "serum",
+        "uso": { "paso_rutina": "tratamiento" },
+        "descripcion_rutina": {
+          "noche": "Aplicar de 4 a 5 gotas sobre el rostro limpio y tonificado, mañana y noche. Masajear suavemente hasta su completa absorción. Puede utilizarse antes de la crema hidratante o mezclado con la base de maquillaje para un acabado luminoso."
+        }
+      },
+      {
+  "id_odoo": 22516,
+  "nombre_producto": "TOCOBO Collagen Brightening Eye Gel Cream",
+  "categoria": "tratamiento",
+  "subtipo": "eye_gel_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "Aplicar una cantidad moderada de la crema en gel para ojos sobre el área del contorno y extender suavemente para ayudar a la absorción."
+  }
+},
+
+
+{
+  "id_odoo": 22516,
+  "nombre_producto": "MEDICUBE PDRN Pink Peptide Eye Cream 30ml",
+  "categoria": "tratamiento",
+  "subtipo": "eye_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "En la última etapa de la rutina de skincare, aplicar una cantidad moderada en el área del contorno de ojos. Dar suaves toques para favorecer la absorción. Fórmula con PDRN de salmón, retinol y péptidos que ayuda a suavizar líneas finas, mejorar la firmeza, reducir la apariencia de ojeras y desinflamar la zona, mientras niacinamida, cafeína y extracto de cúrcuma aportan hidratación y luminosidad."
+  }
+}
+    ]
+  }
+}
+,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{
+  "nombre": "Piel no sensible con melasma",
+  "tipo_piel": "seca",
+  "condicion": "melasma",
+    "rutina": { "mañana": [
+
+
+      {
+        "id_odoo": 22519,
+        "nombre_producto": "TOCOBO Calamine Pore Control Cleansing Oil 200ml",
+        "categoria": "limpiador",
+        "subtipo": "cleansing_oil",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Aplicar una cantidad adecuada sobre el rostro seco y distribuir de manera uniforme. Humedecer el rostro para emulsionar el aceite y enjuagar con agua. En zonas con mayor presencia de sebo, como la zona T y U, masajear con mayor detenimiento para ayudar a disolver el exceso de grasa."
+        }
+      },
+      {
+        "id_odoo": 22518,
+        "nombre_producto": "TOCOBO Coconut Clay Cleansing Foam 150ml",
+        "categoria": "limpiador",
+        "subtipo": "foam_cleanser",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Colocar una cantidad similar al tamaño de una moneda en las palmas húmedas y hacer espuma. Masajear suavemente sobre el rostro y enjuagar completamente con agua."
+        }
+      },
+       {
+        "id_odoo": 22593,
+        "nombre_producto": "TIRTIR MILK SKIN TONER",
+        "categoria": "tonico",
+        "subtipo": "milk_toner",
+        "uso": { "paso_rutina": "tonificación" },
+        "descripcion_rutina": {
+          "día": "Después de la limpieza, aplicar el tónico sobre el rostro. En pieles secas o normales, puede aplicarse en dos capas dejando que se absorba entre cada una para aportar hidratación profunda y confort."
+        }
+      }
+
+
+    ], "día": [
+
+      {
+        "id_odoo": 22658,
+        "nombre_producto": "MEDICUBE TXA NIACINAMIDE 15 SERUM 30ml",
+        "categoria": "tratamiento",
+        "subtipo": "serum",
+        "uso": { "paso_rutina": "tratamiento" },
+        "descripcion_rutina": {
+          "día": "Aplicar una cantidad generosa en el área deseada después de aplicar el tónico. Distribuir suavemente hasta su completa absorción y continuar con la crema hidratante y el protector solar."
+        }
+      },
+      {
+        "id_odoo": 22660,
+        "nombre_producto": "MEDICUBE PDRN PINK COLLAGEN CAPSULE CREAM",
+        "categoria": "hidratante",
+        "subtipo": "Gel_hidratante",
+        "uso": { "paso_rutina": "hidratación" },
+        "descripcion_rutina": {
+          "día": "Mezclar las cápsulas rosadas con el gel transparente y aplicar en rostro y cuello para hidratar y aportar elasticidad y luminosidad, ayudando a mejorar el tono desigual y la apariencia de manchas."
+        }
+      },
+      {
+        "id_odoo": 22521,
+        "nombre_producto": "TOCOBO CICA CALMING SUN SERUM 50ML SPF50+ PA+++",
+        "categoria": "protector_solar",
+        "subtipo": "sun_serum",
+        "uso": { "paso_rutina": "protección_solar" },
+        "descripcion_rutina": {
+          "día": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada de manera uniforme sobre el rostro. Protector solar químico con SPF50+ PA++++ de textura ligera, no comedogénica y no pegajosa, formulado con centella asiática, aloe vera y complejo de ácido hialurónico para ayudar a calmar la piel, aportar hidratación y protegerla de los rayos solares. Utilizar este o el HEIMISH ARTLESS GLOW BASE SPF+/PA++++ 40ml"
+        }
+      },
+      {
+  "id_odoo": 23176,
+  "nombre_producto": "HEIMISH ARTLESS GLOW BASE SPF+/PA++++ 40ml",
+  "categoria": "protector_solar",
+  "subtipo": "skincare_con_color",
+  "uso": { "paso_rutina": "proteccion_solar" },
+  "descripcion_rutina": {
+    "día": "Aplicar una cantidad adecuada sobre el rostro como último paso de la rutina de cuidado de la piel y antes del maquillaje. Protector solar con color y efecto glow que protege de los rayos UV mientras hidrata, ilumina y ayuda a unificar ligeramente el tono. Funciona como crema hidratante, base de maquillaje y protector solar en un solo paso, dejando un acabado luminoso y saludable sin sensación pesada.Utilizar este o el TOCOBO CICA CALMING SUN SERUM 50ML SPF50+ PA+++"
+  }
+},
+ {
+        "id_odoo": 22589,
+        "nombre_producto": "TIRTIR MASK FIT RED CUSHION 24N LATTE",
+        "categoria": "maquillaje",
+        "subtipo": "cushion_foundation",
+        "uso": { "paso_rutina": "maquillaje" },
+        "descripcion_rutina": {
+          "día": "Después de completar la rutina de cuidado de la piel, presionar ligeramente la borla incluida sobre el cushion para tomar una pequeña cantidad de producto. Retirar el exceso en la tapa y aplicar dando suaves toques sobre el rostro, enfocándose en las zonas que requieran mayor cobertura como enrojecimiento o imperfecciones. Construir en capas finas hasta obtener el nivel de cobertura deseado."
+        }
+      }
+
+    ], "noche": [
+
+         {
+        "id_odoo": 22519,
+        "nombre_producto": "TOCOBO Calamine Pore Control Cleansing Oil 200ml",
+        "categoria": "limpiador",
+        "subtipo": "cleansing_oil",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Aplicar una cantidad adecuada sobre el rostro seco y distribuir de manera uniforme. Humedecer el rostro para emulsionar el aceite y enjuagar con agua. En zonas con mayor presencia de sebo, como la zona T y U, masajear con mayor detenimiento para ayudar a disolver el exceso de grasa."
+        }
+      },
+      {
+        "id_odoo": 22518,
+        "nombre_producto": "TOCOBO Coconut Clay Cleansing Foam 150ml",
+        "categoria": "limpiador",
+        "subtipo": "foam_cleanser",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Colocar una cantidad similar al tamaño de una moneda en las palmas húmedas y hacer espuma. Masajear suavemente sobre el rostro y enjuagar completamente con agua."
+        }
+      },
+       {
+        "id_odoo": 22593,
+        "nombre_producto": "TIRTIR MILK SKIN TONER",
+        "categoria": "tonico",
+        "subtipo": "milk_toner",
+        "uso": { "paso_rutina": "tonificación" },
+        "descripcion_rutina": {
+          "día": "Después de la limpieza, aplicar el tónico sobre el rostro. En pieles secas o normales, puede aplicarse en dos capas dejando que se absorba entre cada una para aportar hidratación profunda y confort."
+        }
+      },
+
+      {
+  "id_odoo": 22517,
+  "nombre_producto": "TOCOBO MULTI CERAMIDE CREAM 50ml",
+  "categoria": "hidratante",
+  "subtipo": "crema",
+  "uso": { "paso_rutina": "hidratación" },
+  "descripcion_rutina": {
+    "día": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada de la crema en el rostro. Masajear suavemente para ayudar a la absorción."
+  }
+},
+{
+        "id_odoo": 22609,
+        "nombre_producto": "HEIMISH RX RETINOL BAKUCHIOL BOOSTER OIL",
+        "categoria": "tratamiento",
+        "subtipo": "facial_oil",
+        "uso": { "paso_rutina": "tratamiento" },
+        "frecuencia": "una noche si una noche no",
+        "descripcion_rutina": {
+          "noche": "Durante las primeras dos semanas de uso, aplicar una capa fina del aceite sobre el rostro y el cuello una vez cada dos días. A partir de la tercera semana, aplicar una vez al día durante la rutina nocturna de cuidado de la piel. Puede utilizarse solo o mezclado con el sérum o la crema."
+        }
+      },
+      {
+  "id_odoo": 22516,
+  "nombre_producto": "TOCOBO Collagen Brightening Eye Gel Cream",
+  "categoria": "tratamiento",
+  "subtipo": "eye_gel_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "Aplicar una cantidad moderada de la crema en gel para ojos sobre el área del contorno y extender suavemente para ayudar a la absorción."
+  }
+},
+
+
+{
+  "id_odoo": 22516,
+  "nombre_producto": "MEDICUBE PDRN Pink Peptide Eye Cream 30ml",
+  "categoria": "tratamiento",
+  "subtipo": "eye_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "En la última etapa de la rutina de skincare, aplicar una cantidad moderada en el área del contorno de ojos. Dar suaves toques para favorecer la absorción. Fórmula con PDRN de salmón, retinol y péptidos que ayuda a suavizar líneas finas, mejorar la firmeza, reducir la apariencia de ojeras y desinflamar la zona, mientras niacinamida, cafeína y extracto de cúrcuma aportan hidratación y luminosidad."
+  }
+}
+
+    ] }
+  },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{
+  "nombre": "Piel Seca sensible con melasma",
+  "tipo_piel": "seca",
+  "condicion": "melasma",
+    "rutina": { 
+      "mañana": [
+         {
+        "id_odoo": 22613,
+        "nombre_producto": "heimish All Clean Balm",
+        "categoria": "limpieza",
+        "subtipo": "cleansing_balm",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "noche": "Con el rostro seco, tomar una cantidad moderada del bálsamo utilizando la espátula y masajear suavemente todo el rostro con las manos secas para disolver maquillaje, protector solar e impurezas. Añadir un poco de agua para emulsionar el producto y enjuagar completamente con ABUNDANTE agua."
+        }
+      },
+      {
+  "id_odoo": 22611,
+  "nombre_producto": "heimish All Clean Green Foam",
+  "categoria": "limpieza",
+  "subtipo": "cleansing_foam",
+  "uso": { "paso_rutina": "limpieza" },
+  "descripcion_rutina": {
+    "mañana": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro para eliminar suciedad y exceso de grasa. Enjuagar con agua.",
+    "noche": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro para eliminar suciedad y exceso de grasa. Enjuagar con agua."
+  }
+},
+{
+        "id_odoo": 22593,
+        "nombre_producto": "TIRTIR MILK SKIN TONER",
+        "categoria": "tonico",
+        "subtipo": "milk_toner",
+        "uso": { "paso_rutina": "tonificación" },
+        "descripcion_rutina": {
+          "día": "Después de la limpieza, aplicar el tónico sobre el rostro. En pieles secas o normales, puede aplicarse en dos capas dejando que se absorba entre cada una para aportar hidratación profunda y confort."
+        }
+      }
+      ],
+
+       "día": [
+         {
+        "id_odoo": 22658,
+        "nombre_producto": "MEDICUBE TXA NIACINAMIDE 15 SERUM 30ml",
+        "categoria": "tratamiento",
+        "subtipo": "serum",
+        "uso": { "paso_rutina": "tratamiento" },
+        "descripcion_rutina": {
+          "día": "Aplicar una cantidad generosa en el área deseada después de aplicar el tónico. Distribuir suavemente hasta su completa absorción y continuar con la crema hidratante y el protector solar."
+        }
+      },
+     
+       {
+        "id_odoo": 22660,
+        "nombre_producto": "MEDICUBE PDRN PINK COLLAGEN CAPSULE CREAM",
+        "categoria": "hidratante",
+        "subtipo": "Gel_hidratante",
+        "uso": { "paso_rutina": "hidratación" },
+        "descripcion_rutina": {
+          "día": "Mezclar las cápsulas rosadas con el gel transparente y aplicar en rostro y cuello para hidratar y aportar elasticidad y luminosidad, ayudando a mejorar el tono desigual y la apariencia de manchas."
+        }
+      },
+
+       {
+        "id_odoo": 22521,
+        "nombre_producto": "TOCOBO CICA CALMING SUN SERUM 50ML SPF50+ PA+++",
+        "categoria": "protector_solar",
+        "subtipo": "sun_serum",
+        "uso": { "paso_rutina": "protección_solar" },
+        "descripcion_rutina": {
+          "día": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada de manera uniforme sobre el rostro. Protector solar químico con SPF50+ PA++++ de textura ligera, no comedogénica y no pegajosa, formulado con centella asiática, aloe vera y complejo de ácido hialurónico para ayudar a calmar la piel, aportar hidratación y protegerla de los rayos solares. Utilizar este o el HEIMISH ARTLESS GLOW BASE SPF+/PA++++ 40ml"
+        }
+      },
+      {
+  "id_odoo": 23176,
+  "nombre_producto": "HEIMISH ARTLESS GLOW BASE SPF+/PA++++ 40ml",
+  "categoria": "protector_solar",
+  "subtipo": "skincare_con_color",
+  "uso": { "paso_rutina": "proteccion_solar" },
+  "descripcion_rutina": {
+    "día": "Aplicar una cantidad adecuada sobre el rostro como último paso de la rutina de cuidado de la piel y antes del maquillaje. Protector solar con color y efecto glow que protege de los rayos UV mientras hidrata, ilumina y ayuda a unificar ligeramente el tono. Funciona como crema hidratante, base de maquillaje y protector solar en un solo paso, dejando un acabado luminoso y saludable sin sensación pesada.Utilizar este o el TOCOBO CICA CALMING SUN SERUM 50ML SPF50+ PA+++"
+  }
+},
+
+ {
+        "id_odoo": 22589,
+        "nombre_producto": "TIRTIR MASK FIT RED CUSHION 24N LATTE",
+        "categoria": "maquillaje",
+        "subtipo": "cushion_foundation",
+        "uso": { "paso_rutina": "maquillaje" },
+        "descripcion_rutina": {
+          "día": "Después de completar la rutina de cuidado de la piel, presionar ligeramente la borla incluida sobre el cushion para tomar una pequeña cantidad de producto. Retirar el exceso en la tapa y aplicar dando suaves toques sobre el rostro, enfocándose en las zonas que requieran mayor cobertura como enrojecimiento o imperfecciones. Construir en capas finas hasta obtener el nivel de cobertura deseado."
+        }
+      }
+       ],
+
+        "noche": [
+
+           {
+        "id_odoo": 22613,
+        "nombre_producto": "heimish All Clean Balm",
+        "categoria": "limpieza",
+        "subtipo": "cleansing_balm",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "noche": "Con el rostro seco, tomar una cantidad moderada del bálsamo utilizando la espátula y masajear suavemente todo el rostro con las manos secas para disolver maquillaje, protector solar e impurezas. Añadir un poco de agua para emulsionar el producto y enjuagar completamente con ABUNDANTE agua."
+        }
+      },
+      {
+  "id_odoo": 22611,
+  "nombre_producto": "heimish All Clean Green Foam",
+  "categoria": "limpieza",
+  "subtipo": "cleansing_foam",
+  "uso": { "paso_rutina": "limpieza" },
+  "descripcion_rutina": {
+    "mañana": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro para eliminar suciedad y exceso de grasa. Enjuagar con agua.",
+    "noche": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro para eliminar suciedad y exceso de grasa. Enjuagar con agua."
+  }
+},
+{
+        "id_odoo": 22593,
+        "nombre_producto": "TIRTIR MILK SKIN TONER",
+        "categoria": "tonico",
+        "subtipo": "milk_toner",
+        "uso": { "paso_rutina": "tonificación" },
+        "descripcion_rutina": {
+          "día": "Después de la limpieza, aplicar el tónico sobre el rostro. En pieles secas o normales, puede aplicarse en dos capas dejando que se absorba entre cada una para aportar hidratación profunda y confort."
+        }
+      },
+      {
+  "id_odoo": 22655,
+  "nombre_producto": "MEDICUBE COLLAGEN JELLY CREAM 110ml",
+  "categoria": "hidratante",
+  "subtipo": "gel_cream",
+  "uso": { "paso_rutina": "hidratación" },
+  "descripcion_rutina": {
+    "día": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada sobre todo el rostro y dar suaves toques para favorecer la absorción."
+  }
+},
+
+
+{
+        "id_odoo": 22609,
+        "nombre_producto": "HEIMISH RX RETINOL BAKUCHIOL BOOSTER OIL",
+        "categoria": "tratamiento",
+        "subtipo": "facial_oil",
+        "uso": { "paso_rutina": "tratamiento" },
+        "frecuencia": "una noche si una noche no",
+        "descripcion_rutina": {
+          "noche": "Durante las primeras dos semanas de uso, aplicar una capa fina del aceite sobre el rostro y el cuello una vez cada dos días. A partir de la tercera semana, aplicar una vez al día durante la rutina nocturna de cuidado de la piel. Puede utilizarse solo o mezclado con el sérum o la crema."
+        }
+      },
+
+      {
+  "id_odoo": 22654,
+  "nombre_producto": "MEDICUBE COLLAGEN NIGHT WRAPPING MASK",
+  "categoria": "tratamiento",
+  "subtipo": "sleeping_mask",
+  "uso": { "paso_rutina": "tratamiento_nocturno" },
+  "descripcion_rutina": {
+    "día": "*3 VECES POR SEMANA* Después de la limpieza y de completar la rutina nocturna de cuidado de la piel, aplicar una capa uniforme del producto sobre el rostro, evitando labios, ojos, cejas y la línea del cabello. Esperar aproximadamente 15 minutos hasta que el producto se seque y forme una película fina. Dejar actuar durante la noche. Por la mañana, retirar suavemente la película desde los bordes, enjuagar cualquier residuo restante y continuar con la rutina habitual de cuidado de la piel."
+  }
+  },
+  {
+  "id_odoo": 22516,
+  "nombre_producto": "TOCOBO Collagen Brightening Eye Gel Cream",
+  "categoria": "tratamiento",
+  "subtipo": "eye_gel_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "Aplicar una cantidad moderada de la crema en gel para ojos sobre el área del contorno y extender suavemente para ayudar a la absorción."
+  }
+},
+
+
+{
+  "id_odoo": 22516,
+  "nombre_producto": "MEDICUBE PDRN Pink Peptide Eye Cream 30ml",
+  "categoria": "tratamiento",
+  "subtipo": "eye_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "En la última etapa de la rutina de skincare, aplicar una cantidad moderada en el área del contorno de ojos. Dar suaves toques para favorecer la absorción. Fórmula con PDRN de salmón, retinol y péptidos que ayuda a suavizar líneas finas, mejorar la firmeza, reducir la apariencia de ojeras y desinflamar la zona, mientras niacinamida, cafeína y extracto de cúrcuma aportan hidratación y luminosidad."
+  }
+}
+  ]
+  }
+},
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{
+  "nombre": "Piel Seca sin manchas",
+  "tipo_piel": "seca",
+  "condicion": "none",
+    "rutina": { 
+      "mañana": [
+         {
+        "id_odoo": 22519,
+        "nombre_producto": "TOCOBO Calamine Pore Control Cleansing Oil 200ml",
+        "categoria": "limpiador",
+        "subtipo": "cleansing_oil",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Aplicar una cantidad adecuada sobre el rostro seco y distribuir de manera uniforme. Humedecer el rostro para emulsionar el aceite y enjuagar con agua. En zonas con mayor presencia de sebo, como la zona T y U, masajear con mayor detenimiento para ayudar a disolver el exceso de grasa."
+        }
+      },
+      {
+        "id_odoo": 22518,
+        "nombre_producto": "TOCOBO Coconut Clay Cleansing Foam 150ml",
+        "categoria": "limpiador",
+        "subtipo": "foam_cleanser",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Colocar una cantidad similar al tamaño de una moneda en las palmas húmedas y hacer espuma. Masajear suavemente sobre el rostro y enjuagar completamente con agua."
+        }
+      },
+       {
+        "id_odoo": 22593,
+        "nombre_producto": "TIRTIR MILK SKIN TONER",
+        "categoria": "tonico",
+        "subtipo": "milk_toner",
+        "uso": { "paso_rutina": "tonificación" },
+        "descripcion_rutina": {
+          "día": "Después de la limpieza, aplicar el tónico sobre el rostro. En pieles secas o normales, puede aplicarse en dos capas dejando que se absorba entre cada una para aportar hidratación profunda y confort."
+        }
+      }
+      ],
+
+       "día": [
+          {
+        "id_odoo": 22656,
+        "nombre_producto": "MEDICUBE PDRN PINK PEPTIDE SERUM 30ml",
+        "categoria": "tratamiento",
+        "subtipo": "serum",
+        "uso": { "paso_rutina": "tratamiento" },
+        "descripcion_rutina": {
+          "día": "Aplicar de 4 a 5 gotas sobre el rostro limpio y tonificado, mañana y noche. Masajear suavemente hasta su completa absorción. Puede utilizarse antes de la crema hidratante o mezclado con la base de maquillaje para un acabado luminoso."
+        }
+      },
+
+        {
+  "id_odoo": 22653,
+  "nombre_producto": "MEDICUBE DEEP VITA C CAPSULE CREAM",
+  "categoria": "hidratante",
+  "subtipo": "capsule_cream",
+  "uso": { "paso_rutina": "hidratación" },
+  "descripcion_rutina": {
+    "día": "Mezclar una cantidad adecuada de las cápsulas doradas con el gel transparente hasta obtener una textura cremosa y aplicar suavemente sobre el rostro y el cuello. Ajustar la proporción de cápsulas y gel según las necesidades de la piel. Utilizar como último paso de la rutina de cuidado facial."
+  }
+},
+{
+        "id_odoo": 22521,
+        "nombre_producto": "TOCOBO CICA CALMING SUN SERUM 50ML SPF50+ PA+++",
+        "categoria": "protector_solar",
+        "subtipo": "sun_serum",
+        "uso": { "paso_rutina": "protección_solar" },
+        "descripcion_rutina": {
+          "día": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada de manera uniforme sobre el rostro. Protector solar químico con SPF50+ PA++++ de textura ligera, no comedogénica y no pegajosa, formulado con centella asiática, aloe vera y complejo de ácido hialurónico para ayudar a calmar la piel, aportar hidratación y protegerla de los rayos solares. Utilizar este o el HEIMISH ARTLESS GLOW BASE SPF+/PA++++ 40ml"
+        }
+      },
+      {
+  "id_odoo": 23176,
+  "nombre_producto": "HEIMISH ARTLESS GLOW BASE SPF+/PA++++ 40ml",
+  "categoria": "protector_solar",
+  "subtipo": "skincare_con_color",
+  "uso": { "paso_rutina": "proteccion_solar" },
+  "descripcion_rutina": {
+    "día": "Aplicar una cantidad adecuada sobre el rostro como último paso de la rutina de cuidado de la piel y antes del maquillaje. Protector solar con color y efecto glow que protege de los rayos UV mientras hidrata, ilumina y ayuda a unificar ligeramente el tono. Funciona como crema hidratante, base de maquillaje y protector solar en un solo paso, dejando un acabado luminoso y saludable sin sensación pesada.Utilizar este o el TOCOBO CICA CALMING SUN SERUM 50ML SPF50+ PA+++"
+  }
+},
+ {
+        "id_odoo": 22589,
+        "nombre_producto": "TIRTIR MASK FIT RED CUSHION 24N LATTE",
+        "categoria": "maquillaje",
+        "subtipo": "cushion_foundation",
+        "uso": { "paso_rutina": "maquillaje" },
+        "descripcion_rutina": {
+          "día": "Después de completar la rutina de cuidado de la piel, presionar ligeramente la borla incluida sobre el cushion para tomar una pequeña cantidad de producto. Retirar el exceso en la tapa y aplicar dando suaves toques sobre el rostro, enfocándose en las zonas que requieran mayor cobertura como enrojecimiento o imperfecciones. Construir en capas finas hasta obtener el nivel de cobertura deseado."
+        }
+      }
+       ],
+
+        "noche": [
+          {
+  "id_odoo": 22653,
+  "nombre_producto": "MEDICUBE DEEP VITA C CAPSULE CREAM",
+  "categoria": "hidratante",
+  "subtipo": "capsule_cream",
+  "uso": { "paso_rutina": "hidratación" },
+  "descripcion_rutina": {
+    "día": "Mezclar una cantidad adecuada de las cápsulas doradas con el gel transparente hasta obtener una textura cremosa y aplicar suavemente sobre el rostro y el cuello. Ajustar la proporción de cápsulas y gel según las necesidades de la piel. Utilizar como último paso de la rutina de cuidado facial."
+  }
+},
+
+  {
+  "id_odoo": 22655,
+  "nombre_producto": "MEDICUBE COLLAGEN JELLY CREAM 110ml",
+  "categoria": "hidratante",
+  "subtipo": "gel_cream",
+  "uso": { "paso_rutina": "hidratación" },
+  "descripcion_rutina": {
+    "día": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada sobre todo el rostro y dar suaves toques para favorecer la absorción."
+  }
+},
+{
+  "id_odoo": 22516,
+  "nombre_producto": "TOCOBO Collagen Brightening Eye Gel Cream",
+  "categoria": "tratamiento",
+  "subtipo": "eye_gel_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "Aplicar una cantidad moderada de la crema en gel para ojos sobre el área del contorno y extender suavemente para ayudar a la absorción."
+  }
+},
+
+
+{
+  "id_odoo": 22516,
+  "nombre_producto": "MEDICUBE PDRN Pink Peptide Eye Cream 30ml",
+  "categoria": "tratamiento",
+  "subtipo": "eye_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "En la última etapa de la rutina de skincare, aplicar una cantidad moderada en el área del contorno de ojos. Dar suaves toques para favorecer la absorción. Fórmula con PDRN de salmón, retinol y péptidos que ayuda a suavizar líneas finas, mejorar la firmeza, reducir la apariencia de ojeras y desinflamar la zona, mientras niacinamida, cafeína y extracto de cúrcuma aportan hidratación y luminosidad."
+  }
+},
+{
+        "id_odoo": 22662,
+        "nombre_producto": "MEDICUBE PDRN PINK COLLAGEN GEL MASK (4EA)",
+        "categoria": "tratamiento",
+        "subtipo": "gel_mask",
+        "uso": { "paso_rutina": "mascarilla" },
+        "frecuencia": "una vez por semana",
+        "descripcion_rutina": {
+          "noche": "Después de la limpieza, colocar la mascarilla sobre el rostro evitando el área de los ojos y los labios. Dejar actuar entre 1 y 3 horas y retirar. Dar suaves toques con la esencia restante para facilitar su absorción."
+        }
+      }
+
+        ]
+       }
+  },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{
+  "nombre": "Piel mixta",
+  "tipo_piel": "mixta",
+  "condicion": "none",
+    "rutina": { 
+      "mañana": [
+        {
+        "id_odoo": 22613,
+        "nombre_producto": "heimish All Clean Balm",
+        "categoria": "limpieza",
+        "subtipo": "cleansing_balm",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "noche": "Con el rostro seco, tomar una cantidad moderada del bálsamo utilizando la espátula y masajear suavemente todo el rostro con las manos secas para disolver maquillaje, protector solar e impurezas. Añadir un poco de agua para emulsionar el producto y enjuagar completamente con ABUNDANTE agua."
+        }
+      },
+      {
+  "id_odoo": 22611,
+  "nombre_producto": "heimish All Clean Green Foam",
+  "categoria": "limpieza",
+  "subtipo": "cleansing_foam",
+  "uso": { "paso_rutina": "limpieza" },
+  "descripcion_rutina": {
+    "mañana": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro para eliminar suciedad y exceso de grasa. Enjuagar con agua.",
+    "noche": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro para eliminar suciedad y exceso de grasa. Enjuagar con agua."
+  }
+},
+
+{
+        "id_odoo": 22593,
+        "nombre_producto": "TIRTIR MILK SKIN TONER",
+        "categoria": "tonico",
+        "subtipo": "milk_toner",
+        "uso": { "paso_rutina": "tonificación" },
+        "descripcion_rutina": {
+          "día": "Después de la limpieza, aplicar el tónico sobre el rostro. En pieles secas o normales, puede aplicarse en dos capas dejando que se absorba entre cada una para aportar hidratación profunda y confort."
+        }
+      }
+
+      ],
+      "día":[
+        {
+        "id_odoo": 22609,
+        "nombre_producto": "HEIMISH RX RETINOL BAKUCHIOL BOOSTER OIL",
+        "categoria": "tratamiento",
+        "subtipo": "facial_oil",
+        "uso": { "paso_rutina": "tratamiento" },
+        "frecuencia": "una noche si una noche no",
+        "descripcion_rutina": {
+          "noche": "Durante las primeras dos semanas de uso, aplicar una capa fina del aceite sobre el rostro y el cuello una vez cada dos días. A partir de la tercera semana, aplicar una vez al día durante la rutina nocturna de cuidado de la piel. Puede utilizarse solo o mezclado con el sérum o la crema."
+        }
+      },
+
+      {
+  "id_odoo": 22517,
+  "nombre_producto": "TOCOBO MULTI CERAMIDE CREAM 50ml",
+  "categoria": "hidratante",
+  "subtipo": "crema",
+  "uso": { "paso_rutina": "hidratación" },
+  "descripcion_rutina": {
+    "día": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada de la crema en el rostro. Masajear suavemente para ayudar a la absorción."
+  }
+},
+
+{
+        "id_odoo": 22521,
+        "nombre_producto": "TOCOBO CICA CALMING SUN SERUM 50ML SPF50+ PA+++",
+        "categoria": "protector_solar",
+        "subtipo": "sun_serum",
+        "uso": { "paso_rutina": "protección_solar" },
+        "descripcion_rutina": {
+          "día": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada de manera uniforme sobre el rostro. Protector solar químico con SPF50+ PA++++ de textura ligera, no comedogénica y no pegajosa, formulado con centella asiática, aloe vera y complejo de ácido hialurónico para ayudar a calmar la piel, aportar hidratación y protegerla de los rayos solares. Utilizar este o el HEIMISH ARTLESS GLOW BASE SPF+/PA++++ 40ml"
+        }
+      },
+      {
+  "id_odoo": 23176,
+  "nombre_producto": "HEIMISH ARTLESS GLOW BASE SPF+/PA++++ 40ml",
+  "categoria": "protector_solar",
+  "subtipo": "skincare_con_color",
+  "uso": { "paso_rutina": "proteccion_solar" },
+  "descripcion_rutina": {
+    "día": "Aplicar una cantidad adecuada sobre el rostro como último paso de la rutina de cuidado de la piel y antes del maquillaje. Protector solar con color y efecto glow que protege de los rayos UV mientras hidrata, ilumina y ayuda a unificar ligeramente el tono. Funciona como crema hidratante, base de maquillaje y protector solar en un solo paso, dejando un acabado luminoso y saludable sin sensación pesada.Utilizar este o el TOCOBO CICA CALMING SUN SERUM 50ML SPF50+ PA+++"
+  }
+},
+ {
+        "id_odoo": 22589,
+        "nombre_producto": "TIRTIR MASK FIT RED CUSHION 24N LATTE",
+        "categoria": "maquillaje",
+        "subtipo": "cushion_foundation",
+        "uso": { "paso_rutina": "maquillaje" },
+        "descripcion_rutina": {
+          "día": "Después de completar la rutina de cuidado de la piel, presionar ligeramente la borla incluida sobre el cushion para tomar una pequeña cantidad de producto. Retirar el exceso en la tapa y aplicar dando suaves toques sobre el rostro, enfocándose en las zonas que requieran mayor cobertura como enrojecimiento o imperfecciones. Construir en capas finas hasta obtener el nivel de cobertura deseado."
+        }
+      }
+
+       ], 
+       "noche": [
+
+         {
+        "id_odoo": 22613,
+        "nombre_producto": "heimish All Clean Balm",
+        "categoria": "limpieza",
+        "subtipo": "cleansing_balm",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "noche": "Con el rostro seco, tomar una cantidad moderada del bálsamo utilizando la espátula y masajear suavemente todo el rostro con las manos secas para disolver maquillaje, protector solar e impurezas. Añadir un poco de agua para emulsionar el producto y enjuagar completamente con ABUNDANTE agua."
+        }
+      },
+      {
+  "id_odoo": 22611,
+  "nombre_producto": "heimish All Clean Green Foam",
+  "categoria": "limpieza",
+  "subtipo": "cleansing_foam",
+  "uso": { "paso_rutina": "limpieza" },
+  "descripcion_rutina": {
+    "mañana": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro para eliminar suciedad y exceso de grasa. Enjuagar con agua.",
+    "noche": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro para eliminar suciedad y exceso de grasa. Enjuagar con agua."
+  }
+},
+{
+        "id_odoo": 22593,
+        "nombre_producto": "TIRTIR MILK SKIN TONER",
+        "categoria": "tonico",
+        "subtipo": "milk_toner",
+        "uso": { "paso_rutina": "tonificación" },
+        "descripcion_rutina": {
+          "día": "Después de la limpieza, aplicar el tónico sobre el rostro. En pieles secas o normales, puede aplicarse en dos capas dejando que se absorba entre cada una para aportar hidratación profunda y confort."
+        }
+      },
+
+        {
+        "id_odoo": 22609,
+        "nombre_producto": "HEIMISH RX RETINOL BAKUCHIOL BOOSTER OIL",
+        "categoria": "tratamiento",
+        "subtipo": "facial_oil",
+        "uso": { "paso_rutina": "tratamiento" },
+        "frecuencia": "una noche si una noche no",
+        "descripcion_rutina": {
+          "noche": "Durante las primeras dos semanas de uso, aplicar una capa fina del aceite sobre el rostro y el cuello una vez cada dos días. A partir de la tercera semana, aplicar una vez al día durante la rutina nocturna de cuidado de la piel. Puede utilizarse solo o mezclado con el sérum o la crema."
+        }
+      },
+
+      {
+  "id_odoo": 22517,
+  "nombre_producto": "TOCOBO MULTI CERAMIDE CREAM 50ml",
+  "categoria": "hidratante",
+  "subtipo": "crema",
+  "uso": { "paso_rutina": "hidratación" },
+  "descripcion_rutina": {
+    "día": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada de la crema en el rostro. Masajear suavemente para ayudar a la absorción."
+  }
+},
+
+      {
+        "id_odoo": 22652,
+        "nombre_producto": "MEDICUBE 2024 ZERO PORE PAD 2.0",
+        "categoria": "tratamiento",
+        "subtipo": "toner_pad_exfoliante",
+        "uso": { "paso_rutina": "exfoliación" },
+        "frecuencia": "una noche sí, una noche no",
+        "descripcion_rutina": {
+          "noche": "Sobre la piel limpia y seca, deslizar el lado con relieve del pad por el rostro para una exfoliación completa. Dar la vuelta al pad y pasar el lado suave para calmar la piel y prepararla para los siguientes pasos de la rutina. Dar suaves toques con el producto restante para favorecer la absorción. Continuar con el sérum y la crema hidratante. NO COMBINAR CON  MEDICUBE TXA NIACINAMIDE 15 SERUM 30ml"
+        }
+      },
+
+      {
+  "id_odoo": 22516,
+  "nombre_producto": "MEDICUBE PDRN Pink Peptide Eye Cream 30ml",
+  "categoria": "tratamiento",
+  "subtipo": "eye_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "En la última etapa de la rutina de skincare, aplicar una cantidad moderada en el área del contorno de ojos. Dar suaves toques para favorecer la absorción. Fórmula con PDRN de salmón, retinol y péptidos que ayuda a suavizar líneas finas, mejorar la firmeza, reducir la apariencia de ojeras y desinflamar la zona, mientras niacinamida, cafeína y extracto de cúrcuma aportan hidratación y luminosidad."
+  }
+},
+{
+        "id_odoo": 22662,
+        "nombre_producto": "MEDICUBE PDRN PINK COLLAGEN GEL MASK (4EA)",
+        "categoria": "tratamiento",
+        "subtipo": "gel_mask",
+        "uso": { "paso_rutina": "mascarilla" },
+        "frecuencia": "una vez por semana",
+        "descripcion_rutina": {
+          "noche": "Después de la limpieza, colocar la mascarilla sobre el rostro evitando el área de los ojos y los labios. Dejar actuar entre 1 y 3 horas y retirar. Dar suaves toques con la esencia restante para facilitar su absorción."
+        }
+      }
+
+      ]
+       }
+  },
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  {
+  "nombre": "Piel grasa  tendencia acnéica ",
+  "tipo_piel": "grasa",
+  "condicion": "acné",
+
+  "rutina": {
+    "mañana": [
+      {
+        "id_odoo": 22612,
+        "nombre_producto": "heimish Matcha Biome Amino Acne Cleansing Foam",
+        "categoria": "limpieza",
+        "subtipo": "cleansing_foam",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "mañana": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro con movimientos circulares. Enjuagar con agua para eliminar impurezas y exceso de sebo."
+        }
+      }
+    ],
+
+    "día": [
+      {
+        "id_odoo": 22658,
+        "nombre_producto": "MEDICUBE TXA NIACINAMIDE 15 SERUM 30ml",
+        "categoria": "tratamiento",
+        "subtipo": "serum",
+        "uso": { "paso_rutina": "tratamiento" },
+        "descripcion_rutina": {
+          "día": "Aplicar una cantidad generosa en el área deseada después de aplicar el tónico. Distribuir suavemente hasta su completa absorción y continuar con la crema hidratante y el protector solar."
+        }
+      },
+      {
+        "id_odoo": 22656,
+        "nombre_producto": "MEDICUBE PDRN PINK PEPTIDE SERUM 30ml",
+        "categoria": "tratamiento",
+        "subtipo": "serum",
+        "uso": { "paso_rutina": "tratamiento" },
+        "descripcion_rutina": {
+          "día": "Aplicar de 4 a 5 gotas sobre el rostro limpio y tonificado, mañana y noche. Masajear suavemente hasta su completa absorción. Puede utilizarse antes de la crema hidratante o mezclado con la base de maquillaje para un acabado luminoso."
+        }
+      },
+      {
+        "id_odoo": 22520,
+        "nombre_producto": "TOCOBO COTTON SOFT SUN STICK SPF50+ PA+++",
+        "categoria": "protector_solar",
+        "subtipo": "sun_stick",
+        "uso": { "paso_rutina": "protección_solar" },
+        "descripcion_rutina": {
+          "día": "protector solar en barra que ayuda a controlar la grasa dejando así un acabado matificante, se puede retocar cada 4 horas, aplicar como paso final de la rutina de skinker en todo el rostros"
+        }
+      },
+       {
+        "id_odoo": 22589,
+        "nombre_producto": "TIRTIR MASK FIT RED CUSHION 24N LATTE",
+        "categoria": "maquillaje",
+        "subtipo": "cushion_foundation",
+        "uso": { "paso_rutina": "maquillaje" },
+        "descripcion_rutina": {
+          "día": "Después de completar la rutina de cuidado de la piel, presionar ligeramente la borla incluida sobre el cushion para tomar una pequeña cantidad de producto. Retirar el exceso en la tapa y aplicar dando suaves toques sobre el rostro, enfocándose en las zonas que requieran mayor cobertura como enrojecimiento o imperfecciones. Construir en capas finas hasta obtener el nivel de cobertura deseado."
+        }
+      }
+    ],
+
+    "noche": [
+      {
+        "id_odoo": 22613,
+        "nombre_producto": "heimish All Clean Balm",
+        "categoria": "limpieza",
+        "subtipo": "cleansing_balm",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "noche": "Con el rostro seco, tomar una cantidad moderada del bálsamo utilizando la espátula y masajear suavemente todo el rostro con las manos secas para disolver maquillaje, protector solar e impurezas. Añadir un poco de agua para emulsionar el producto y enjuagar completamente con ABUNDANTE agua."
+        }
+      },
+      {
+        "id_odoo": 22612,
+        "nombre_producto": "heimish Matcha Biome Amino Acne Cleansing Foam",
+        "categoria": "limpieza",
+        "subtipo": "cleansing_foam",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "noche": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro con movimientos circulares. Enjuagar con agua para eliminar impurezas y exceso de sebo."
+        }
+      },
+      {
+        "id_odoo": 22652,
+        "nombre_producto": "MEDICUBE 2024 ZERO PORE PAD 2.0",
+        "categoria": "tratamiento",
+        "subtipo": "toner_pad_exfoliante",
+        "uso": { "paso_rutina": "exfoliación" },
+        "frecuencia": "una noche sí, una noche no",
+        "descripcion_rutina": {
+          "noche": "Sobre la piel limpia y seca, deslizar el lado con relieve del pad por el rostro para una exfoliación completa. Dar la vuelta al pad y pasar el lado suave para calmar la piel y prepararla para los siguientes pasos de la rutina. Dar suaves toques con el producto restante para favorecer la absorción. Continuar con el sérum y la crema hidratante. NO COMBINAR CON  MEDICUBE TXA NIACINAMIDE 15 SERUM 30ml"
+        }
+      },
+      {
+        "id_odoo": 22658,
+        "nombre_producto": "MEDICUBE TXA NIACINAMIDE 15 SERUM 30ml",
+        "categoria": "tratamiento",
+        "subtipo": "serum",
+        "uso": { "paso_rutina": "tratamiento" },
+        "frecuencia": "los días que NO se usa el ZERO PORE PAD",
+        "descripcion_rutina": {
+          "noche": "Aplicar una cantidad generosa en el área deseada después de aplicar el tónico. Distribuir suavemente hasta su completa absorción y continuar con la crema hidratante y el protector solar. NO COMBINAR CON MEDICUBE 2024 ZERO PORE PAD 2.0"
+        }
+      },
+
+      {
+  "id_odoo": 22516,
+  "nombre_producto": "MEDICUBE PDRN Pink Peptide Eye Cream 30ml",
+  "categoria": "tratamiento",
+  "subtipo": "eye_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "En la última etapa de la rutina de skincare, aplicar una cantidad moderada en el área del contorno de ojos. Dar suaves toques para favorecer la absorción. Fórmula con PDRN de salmón, retinol y péptidos que ayuda a suavizar líneas finas, mejorar la firmeza, reducir la apariencia de ojeras y desinflamar la zona, mientras niacinamida, cafeína y extracto de cúrcuma aportan hidratación y luminosidad."
+  }
+},
+{
+        "id_odoo": 22662,
+        "nombre_producto": "MEDICUBE PDRN PINK COLLAGEN GEL MASK (4EA)",
+        "categoria": "tratamiento",
+        "subtipo": "gel_mask",
+        "uso": { "paso_rutina": "mascarilla" },
+        "frecuencia": "una vez por semana",
+        "descripcion_rutina": {
+          "noche": "Después de la limpieza, colocar la mascarilla sobre el rostro evitando el área de los ojos y los labios. Dejar actuar entre 1 y 3 horas y retirar. Dar suaves toques con la esencia restante para facilitar su absorción."
+        }
+      }
+    ]
+  }
+},
+
+
+
+
+
+
+
+
+
+
+
+{
+  "nombre": "piel grasa",
+  "tipo_piel": "grasa",
+  "condicion": "none",
+  "rutina": {
+    "mañana": [
+    {
+  "id_odoo": 22611,
+  "nombre_producto": "heimish All Clean Green Foam",
+  "categoria": "limpieza",
+  "subtipo": "cleansing_foam",
+  "uso": { "paso_rutina": "limpieza" },
+  "descripcion_rutina": {
+    "mañana": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro para eliminar suciedad y exceso de grasa. Enjuagar con agua.",
+    "noche": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro para eliminar suciedad y exceso de grasa. Enjuagar con agua."
+  }
+}
+    ],
+
+    "día": [
+      {
+        "id_odoo": 22658,
+        "nombre_producto": "MEDICUBE TXA NIACINAMIDE 15 SERUM 30ml",
+        "categoria": "tratamiento",
+        "subtipo": "serum",
+        "uso": { "paso_rutina": "tratamiento" },
+        "descripcion_rutina": {
+          "día": "Aplicar una cantidad generosa en el área deseada después de aplicar el tónico. Distribuir suavemente hasta su completa absorción y continuar con la crema hidratante y el protector solar."
+        }
+      },
+      {
+        "id_odoo": 22656,
+        "nombre_producto": "MEDICUBE PDRN PINK PEPTIDE SERUM 30ml",
+        "categoria": "tratamiento",
+        "subtipo": "serum",
+        "uso": { "paso_rutina": "tratamiento" },
+        "descripcion_rutina": {
+          "día": "Aplicar de 4 a 5 gotas sobre el rostro limpio y tonificado, mañana y noche. Masajear suavemente hasta su completa absorción. Puede utilizarse antes de la crema hidratante o mezclado con la base de maquillaje para un acabado luminoso."
+        }
+      },
+      {
+        "id_odoo": 22520,
+        "nombre_producto": "TOCOBO COTTON SOFT SUN STICK SPF50+ PA+++",
+        "categoria": "protector_solar",
+        "subtipo": "sun_stick",
+        "uso": { "paso_rutina": "protección_solar" },
+        "descripcion_rutina": {
+          "día": "protector solar en barra que ayuda a controlar la grasa dejando así un acabado matificante, se puede retocar cada 4 horas, aplicar como paso final de la rutina de skinker en todo el rostros"
+        }
+      },
+       {
+        "id_odoo": 22589,
+        "nombre_producto": "TIRTIR MASK FIT RED CUSHION 24N LATTE",
+        "categoria": "maquillaje",
+        "subtipo": "cushion_foundation",
+        "uso": { "paso_rutina": "maquillaje" },
+        "descripcion_rutina": {
+          "día": "Después de completar la rutina de cuidado de la piel, presionar ligeramente la borla incluida sobre el cushion para tomar una pequeña cantidad de producto. Retirar el exceso en la tapa y aplicar dando suaves toques sobre el rostro, enfocándose en las zonas que requieran mayor cobertura como enrojecimiento o imperfecciones. Construir en capas finas hasta obtener el nivel de cobertura deseado."
+        }
+      }
+    ],
+
+    "noche": [
+    
+       {
+  "id_odoo": 22611,
+  "nombre_producto": "heimish All Clean Green Foam",
+  "categoria": "limpieza",
+  "subtipo": "cleansing_foam",
+  "uso": { "paso_rutina": "limpieza" },
+  "descripcion_rutina": {
+    "mañana": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro para eliminar suciedad y exceso de grasa. Enjuagar con agua.",
+    "noche": "Tomar una cantidad adecuada del limpiador en las manos, emulsionar con agua hasta formar espuma y masajear suavemente el rostro para eliminar suciedad y exceso de grasa. Enjuagar con agua."
+  }
+},
+      {
+        "id_odoo": 22652,
+        "nombre_producto": "MEDICUBE 2024 ZERO PORE PAD 2.0",
+        "categoria": "tratamiento",
+        "subtipo": "toner_pad_exfoliante",
+        "uso": { "paso_rutina": "exfoliación" },
+        "frecuencia": "una noche sí, una noche no",
+        "descripcion_rutina": {
+          "noche": "Sobre la piel limpia y seca, deslizar el lado con relieve del pad por el rostro para una exfoliación completa. Dar la vuelta al pad y pasar el lado suave para calmar la piel y prepararla para los siguientes pasos de la rutina. Dar suaves toques con el producto restante para favorecer la absorción. Continuar con el sérum y la crema hidratante. NO COMBINAR CON  MEDICUBE TXA NIACINAMIDE 15 SERUM 30ml"
+        }
+      },
+      {
+        "id_odoo": 22658,
+        "nombre_producto": "MEDICUBE TXA NIACINAMIDE 15 SERUM 30ml",
+        "categoria": "tratamiento",
+        "subtipo": "serum",
+        "uso": { "paso_rutina": "tratamiento" },
+        "frecuencia": "los días que NO se usa el ZERO PORE PAD",
+        "descripcion_rutina": {
+          "noche": "Aplicar una cantidad generosa en el área deseada después de aplicar el tónico. Distribuir suavemente hasta su completa absorción y continuar con la crema hidratante y el protector solar. NO COMBINAR CON MEDICUBE 2024 ZERO PORE PAD 2.0"
+        }
+      },
+
+      {
+  "id_odoo": 22516,
+  "nombre_producto": "MEDICUBE PDRN Pink Peptide Eye Cream 30ml",
+  "categoria": "tratamiento",
+  "subtipo": "eye_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "En la última etapa de la rutina de skincare, aplicar una cantidad moderada en el área del contorno de ojos. Dar suaves toques para favorecer la absorción. Fórmula con PDRN de salmón, retinol y péptidos que ayuda a suavizar líneas finas, mejorar la firmeza, reducir la apariencia de ojeras y desinflamar la zona, mientras niacinamida, cafeína y extracto de cúrcuma aportan hidratación y luminosidad."
+  }
+},
+{
+        "id_odoo": 22662,
+        "nombre_producto": "MEDICUBE PDRN PINK COLLAGEN GEL MASK (4EA)",
+        "categoria": "tratamiento",
+        "subtipo": "gel_mask",
+        "uso": { "paso_rutina": "mascarilla" },
+        "frecuencia": "una vez por semana",
+        "descripcion_rutina": {
+          "noche": "Después de la limpieza, colocar la mascarilla sobre el rostro evitando el área de los ojos y los labios. Dejar actuar entre 1 y 3 horas y retirar. Dar suaves toques con la esencia restante para facilitar su absorción."
+        }
+      }
+    ]
+  }
+},
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{
+  "nombre": "piel normal opaca",
+  "tipo_piel": "normal",
+  "condicion": "none",
+  "rutina": {
+
+
+    "mañana": [
+  
+
+      {
+        "id_odoo": 22519,
+        "nombre_producto": "TOCOBO Calamine Pore Control Cleansing Oil 200ml",
+        "categoria": "limpiador",
+        "subtipo": "cleansing_oil",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Aplicar una cantidad adecuada sobre el rostro seco y distribuir de manera uniforme. Humedecer el rostro para emulsionar el aceite y enjuagar con agua. En zonas con mayor presencia de sebo, como la zona T y U, masajear con mayor detenimiento para ayudar a disolver el exceso de grasa."
+        }
+      },
+      
+      {
+        "id_odoo": 22518,
+        "nombre_producto": "TOCOBO Coconut Clay Cleansing Foam 150ml",
+        "categoria": "limpiador",
+        "subtipo": "foam_cleanser",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Colocar una cantidad similar al tamaño de una moneda en las palmas húmedas y hacer espuma. Masajear suavemente sobre el rostro y enjuagar completamente con agua."
+        }
+      },
+       {
+        "id_odoo": 22593,
+        "nombre_producto": "TIRTIR MILK SKIN TONER",
+        "categoria": "tonico",
+        "subtipo": "milk_toner",
+        "uso": { "paso_rutina": "tonificación" },
+        "descripcion_rutina": {
+          "día": "Después de la limpieza, aplicar el tónico sobre el rostro. En pieles secas o normales, puede aplicarse en dos capas dejando que se absorba entre cada una para aportar hidratación profunda y confort."
+        }
+      }
+    ],
+
+    "día": [
+      {
+  "id_odoo": 22653,
+  "nombre_producto": "MEDICUBE DEEP VITA C CAPSULE CREAM",
+  "categoria": "hidratante",
+  "subtipo": "capsule_cream",
+  "uso": { "paso_rutina": "hidratación" },
+  "descripcion_rutina": {
+    "día": "Mezclar una cantidad adecuada de las cápsulas doradas con el gel transparente hasta obtener una textura cremosa y aplicar suavemente sobre el rostro y el cuello. Ajustar la proporción de cápsulas y gel según las necesidades de la piel. Utilizar como último paso de la rutina de cuidado facial. **No combiinar con HEIMISH RX MULTI VITAMIN 7% GLOW SERUM**"
+  }
+},
+{
+  "id_odoo": 23175,
+  "nombre_producto": "HEIMISH RX MULTI VITAMIN 7% GLOW SERUM",
+  "categoria": "tratamiento",
+  "subtipo": "serum",
+  "uso": {
+    "paso_rutina": "tratamiento"
+  },
+  "frecuencia": "uso diario",
+  "descripcion_rutina": {
+    "mañana": "Aplicar una cantidad de 4 a 5 Gotas del sérum sobre el rostro y distribuir suavemente hasta su completa absorción. Sérum de textura ligera formulado con vitamina C y niacinamida para ayudar a unificar el tono, aportar luminosidad y mejorar la apariencia de la piel apagada, ideal para usar antes del maquillaje. **No combinar con MEDICUBE DEEP VITA C CAPSULE CREAM**"
+  }
+},
+
+ {
+        "id_odoo": 22660,
+        "nombre_producto": "MEDICUBE PDRN PINK COLLAGEN CAPSULE CREAM",
+        "categoria": "hidratante",
+        "subtipo": "Gel_hidratante",
+        "uso": { "paso_rutina": "hidratación" },
+        "descripcion_rutina": {
+          "día": "Mezclar las cápsulas rosadas con el gel transparente y aplicar en rostro y cuello para hidratar y aportar elasticidad y luminosidad, ayudando a mejorar el tono desigual y la apariencia de manchas.** o puede usar MEDICUBE PDRN PINK PEPTIDE SERUM 30ml**"
+        }
+      },
+
+      {
+        "id_odoo": 22656,
+        "nombre_producto": "MEDICUBE PDRN PINK PEPTIDE SERUM 30ml",
+        "categoria": "tratamiento",
+        "subtipo": "serum",
+        "uso": { "paso_rutina": "tratamiento" },
+        "descripcion_rutina": {
+          "día": "Aplicar de 4 a 5 gotas sobre el rostro limpio y tonificado, mañana y noche. Masajear suavemente hasta su completa absorción. Puede utilizarse antes de la crema hidratante o mezclado con la base de maquillaje para un acabado luminoso.** O puede usar MEDICUBE PDRN PINK COLLAGEN CAPSULE CREAM ** "
+        }
+      },
+
+      {
+  "id_odoo": 22517,
+  "nombre_producto": "TOCOBO MULTI CERAMIDE CREAM 50ml",
+  "categoria": "hidratante",
+  "subtipo": "crema",
+  "uso": { "paso_rutina": "hidratación" },
+  "descripcion_rutina": {
+    "día": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada de la crema en el rostro. Masajear suavemente para ayudar a la absorción. ** O puede usar MEDICUBE PDRN PINK PEPTIDE SERUM 30ml o MEDICUBE PDRN PINK COLLAGEN CAPSULE CREAM**"
+  }
+},
+
+ {
+        "id_odoo": 22521,
+        "nombre_producto": "TOCOBO CICA CALMING SUN SERUM 50ML SPF50+ PA+++",
+        "categoria": "protector_solar",
+        "subtipo": "sun_serum",
+        "uso": { "paso_rutina": "protección_solar" },
+        "descripcion_rutina": {
+          "día": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada de manera uniforme sobre el rostro. Protector solar químico con SPF50+ PA++++ de textura ligera, no comedogénica y no pegajosa, formulado con centella asiática, aloe vera y complejo de ácido hialurónico para ayudar a calmar la piel, aportar hidratación y protegerla de los rayos solares.** Puede usar cualquier otro protector solar de la marca**"
+        }
+      },
+       {
+        "id_odoo": 22589,
+        "nombre_producto": "TIRTIR MASK FIT RED CUSHION 24N LATTE",
+        "categoria": "maquillaje",
+        "subtipo": "cushion_foundation",
+        "uso": { "paso_rutina": "maquillaje" },
+        "descripcion_rutina": {
+          "día": "Después de completar la rutina de cuidado de la piel, presionar ligeramente la borla incluida sobre el cushion para tomar una pequeña cantidad de producto. Retirar el exceso en la tapa y aplicar dando suaves toques sobre el rostro, enfocándose en las zonas que requieran mayor cobertura como enrojecimiento o imperfecciones. Construir en capas finas hasta obtener el nivel de cobertura deseado."
+        }
+      }
+
+      
+
+       
+      
+    ],
+
+    "noche": [
+
+
+       {
+        "id_odoo": 22519,
+        "nombre_producto": "TOCOBO Calamine Pore Control Cleansing Oil 200ml",
+        "categoria": "limpiador",
+        "subtipo": "cleansing_oil",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Aplicar una cantidad adecuada sobre el rostro seco y distribuir de manera uniforme. Humedecer el rostro para emulsionar el aceite y enjuagar con agua. En zonas con mayor presencia de sebo, como la zona T y U, masajear con mayor detenimiento para ayudar a disolver el exceso de grasa."
+        }
+      },
+      {
+        "id_odoo": 22518,
+        "nombre_producto": "TOCOBO Coconut Clay Cleansing Foam 150ml",
+        "categoria": "limpiador",
+        "subtipo": "foam_cleanser",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Colocar una cantidad similar al tamaño de una moneda en las palmas húmedas y hacer espuma. Masajear suavemente sobre el rostro y enjuagar completamente con agua."
+        }
+      },
+       {
+        "id_odoo": 22593,
+        "nombre_producto": "TIRTIR MILK SKIN TONER",
+        "categoria": "tonico",
+        "subtipo": "milk_toner",
+        "uso": { "paso_rutina": "tonificación" },
+        "descripcion_rutina": {
+          "día": "Después de la limpieza, aplicar el tónico sobre el rostro. En pieles secas o normales, puede aplicarse en dos capas dejando que se absorba entre cada una para aportar hidratación profunda y confort."
+        }
+      },
+
+       {
+  "id_odoo": 22516,
+  "nombre_producto": "MEDICUBE PDRN Pink Peptide Eye Cream 30ml",
+  "categoria": "tratamiento",
+  "subtipo": "eye_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "En la última etapa de la rutina de skincare, aplicar una cantidad moderada en el área del contorno de ojos. Dar suaves toques para favorecer la absorción. Fórmula con PDRN de salmón, retinol y péptidos que ayuda a suavizar líneas finas, mejorar la firmeza, reducir la apariencia de ojeras y desinflamar la zona, mientras niacinamida, cafeína y extracto de cúrcuma aportan hidratación y luminosidad."
+  }
+},
+
+{
+  "id_odoo": 22516,
+  "nombre_producto": "TOCOBO Collagen Brightening Eye Gel Cream",
+  "categoria": "tratamiento",
+  "subtipo": "eye_gel_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "Aplicar una cantidad moderada de la crema en gel para ojos sobre el área del contorno y extender suavemente para ayudar a la absorción."
+  }
+},
+    
+      {
+        "id_odoo": 22662,
+        "nombre_producto": "MEDICUBE PDRN PINK COLLAGEN GEL MASK (4EA)",
+        "categoria": "tratamiento",
+        "subtipo": "gel_mask",
+        "uso": { "paso_rutina": "mascarilla" },
+        "frecuencia": "una vez por semana",
+        "descripcion_rutina": {
+          "noche": "Después de la limpieza, colocar la mascarilla sobre el rostro evitando el área de los ojos y los labios. Dejar actuar entre 1 y 3 horas y retirar. Dar suaves toques con la esencia restante para facilitar su absorción."
+        }
+      }
+    ]
+  }
+},
+
+
+
+
+
+
+{
+  "nombre": "piel normal Anti-age",
+  "tipo_piel": "normal",
+  "condicion": "none",
+  "rutina": {
+
+
+    "mañana": [
+  
+
+      {
+        "id_odoo": 22519,
+        "nombre_producto": "TOCOBO Calamine Pore Control Cleansing Oil 200ml",
+        "categoria": "limpiador",
+        "subtipo": "cleansing_oil",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Aplicar una cantidad adecuada sobre el rostro seco y distribuir de manera uniforme. Humedecer el rostro para emulsionar el aceite y enjuagar con agua. En zonas con mayor presencia de sebo, como la zona T y U, masajear con mayor detenimiento para ayudar a disolver el exceso de grasa."
+        }
+      },
+      {
+        "id_odoo": 22518,
+        "nombre_producto": "TOCOBO Coconut Clay Cleansing Foam 150ml",
+        "categoria": "limpiador",
+        "subtipo": "foam_cleanser",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Colocar una cantidad similar al tamaño de una moneda en las palmas húmedas y hacer espuma. Masajear suavemente sobre el rostro y enjuagar completamente con agua."
+        }
+      },
+       {
+        "id_odoo": 22593,
+        "nombre_producto": "TIRTIR MILK SKIN TONER",
+        "categoria": "tonico",
+        "subtipo": "milk_toner",
+        "uso": { "paso_rutina": "tonificación" },
+        "descripcion_rutina": {
+          "día": "Después de la limpieza, aplicar el tónico sobre el rostro. En pieles secas o normales, puede aplicarse en dos capas dejando que se absorba entre cada una para aportar hidratación profunda y confort."
+        }
+      }
+    ],
+
+    "día": [
+      {
+  "id_odoo": 22653,
+  "nombre_producto": "MEDICUBE DEEP VITA C CAPSULE CREAM",
+  "categoria": "hidratante",
+  "subtipo": "capsule_cream",
+  "uso": { "paso_rutina": "hidratación" },
+  "descripcion_rutina": {
+    "día": "Mezclar una cantidad adecuada de las cápsulas doradas con el gel transparente hasta obtener una textura cremosa y aplicar suavemente sobre el rostro y el cuello. Ajustar la proporción de cápsulas y gel según las necesidades de la piel. Utilizar como último paso de la rutina de cuidado facial.**No combiinar con HEIMISH RX MULTI VITAMIN 7% GLOW SERUM**"
+  }
+},
+{
+  "id_odoo": 23175,
+  "nombre_producto": "HEIMISH RX MULTI VITAMIN 7% GLOW SERUM",
+  "categoria": "tratamiento",
+  "subtipo": "serum",
+  "uso": {
+    "paso_rutina": "tratamiento"
+  },
+  "frecuencia": "uso diario",
+  "descripcion_rutina": {
+    "mañana": "Aplicar una cantidad de 4 a 5 gotas del sérum sobre el rostro y distribuir suavemente hasta su completa absorción. Sérum de textura ligera formulado con vitamina C y niacinamida para ayudar a unificar el tono, aportar luminosidad y mejorar la apariencia de la piel apagada, ideal para usar antes del maquillaje.**No combinar con MEDICUBE DEEP VITA C CAPSULE CREAM"
+  }
+},
+
+ {
+        "id_odoo": 22660,
+        "nombre_producto": "MEDICUBE PDRN PINK COLLAGEN CAPSULE CREAM",
+        "categoria": "hidratante",
+        "subtipo": "Gel_hidratante",
+        "uso": { "paso_rutina": "hidratación" },
+        "descripcion_rutina": {
+          "día": "Mezclar las cápsulas rosadas con el gel transparente y aplicar en rostro y cuello para hidratar y aportar elasticidad y luminosidad, ayudando a mejorar el tono desigual y la apariencia de manchas.** o puede usar MEDICUBE PDRN PINK PEPTIDE SERUM 30ml**"
+        }
+      },
+
+      {
+        "id_odoo": 22656,
+        "nombre_producto": "MEDICUBE PDRN PINK PEPTIDE SERUM 30ml",
+        "categoria": "tratamiento",
+        "subtipo": "serum",
+        "uso": { "paso_rutina": "tratamiento" },
+        "descripcion_rutina": {
+          "día": "Aplicar de 4 a 5 gotas sobre el rostro limpio y tonificado, mañana y noche. Masajear suavemente hasta su completa absorción. Puede utilizarse antes de la crema hidratante o mezclado con la base de maquillaje para un acabado luminoso.** o puede usar MEDICUBE PDRN PINK COLLAGEN CAPSULE CREAM ** "
+        }
+      },
+
+      {
+  "id_odoo": 22517,
+  "nombre_producto": "TOCOBO MULTI CERAMIDE CREAM 50ml",
+  "categoria": "hidratante",
+  "subtipo": "crema",
+  "uso": { "paso_rutina": "hidratación" },
+  "descripcion_rutina": {
+    "día": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada de la crema en el rostro. Masajear suavemente para ayudar a la absorción. ** O puede usar MEDICUBE PDRN PINK PEPTIDE SERUM 30ml o MEDICUBE PDRN PINK COLLAGEN CAPSULE CREAM**"
+  }
+},
+
+ {
+        "id_odoo": 22521,
+        "nombre_producto": "TOCOBO CICA CALMING SUN SERUM 50ML SPF50+ PA+++",
+        "categoria": "protector_solar",
+        "subtipo": "sun_serum",
+        "uso": { "paso_rutina": "protección_solar" },
+        "descripcion_rutina": {
+          "día": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada de manera uniforme sobre el rostro. Protector solar químico con SPF50+ PA++++ de textura ligera, no comedogénica y no pegajosa, formulado con centella asiática, aloe vera y complejo de ácido hialurónico para ayudar a calmar la piel, aportar hidratación y protegerla de los rayos solares.** Puede usar cualquier otro protector solar de la marca**"
+        }
+      },
+       {
+        "id_odoo": 22589,
+        "nombre_producto": "TIRTIR MASK FIT RED CUSHION 24N LATTE",
+        "categoria": "maquillaje",
+        "subtipo": "cushion_foundation",
+        "uso": { "paso_rutina": "maquillaje" },
+        "descripcion_rutina": {
+          "día": "Después de completar la rutina de cuidado de la piel, presionar ligeramente la borla incluida sobre el cushion para tomar una pequeña cantidad de producto. Retirar el exceso en la tapa y aplicar dando suaves toques sobre el rostro, enfocándose en las zonas que requieran mayor cobertura como enrojecimiento o imperfecciones. Construir en capas finas hasta obtener el nivel de cobertura deseado."
+        }
+      }
+
+      
+
+       
+      
+    ],
+
+    "noche": [
+
+
+       {
+        "id_odoo": 22519,
+        "nombre_producto": "TOCOBO Calamine Pore Control Cleansing Oil 200ml",
+        "categoria": "limpiador",
+        "subtipo": "cleansing_oil",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Aplicar una cantidad adecuada sobre el rostro seco y distribuir de manera uniforme. Humedecer el rostro para emulsionar el aceite y enjuagar con agua. En zonas con mayor presencia de sebo, como la zona T y U, masajear con mayor detenimiento para ayudar a disolver el exceso de grasa."
+        }
+      },
+      {
+        "id_odoo": 22518,
+        "nombre_producto": "TOCOBO Coconut Clay Cleansing Foam 150ml",
+        "categoria": "limpiador",
+        "subtipo": "foam_cleanser",
+        "uso": { "paso_rutina": "limpieza" },
+        "descripcion_rutina": {
+          "día": "Colocar una cantidad similar al tamaño de una moneda en las palmas húmedas y hacer espuma. Masajear suavemente sobre el rostro y enjuagar completamente con agua."
+        }
+      },
+       {
+        "id_odoo": 22593,
+        "nombre_producto": "TIRTIR MILK SKIN TONER",
+        "categoria": "tonico",
+        "subtipo": "milk_toner",
+        "uso": { "paso_rutina": "tonificación" },
+        "descripcion_rutina": {
+          "día": "Después de la limpieza, aplicar el tónico sobre el rostro. En pieles secas o normales, puede aplicarse en dos capas dejando que se absorba entre cada una para aportar hidratación profunda y confort."
+        }
+      },
+
+
+
+       {
+        "id_odoo": 22609,
+        "nombre_producto": "HEIMISH RX RETINOL BAKUCHIOL BOOSTER OIL",
+        "categoria": "tratamiento",
+        "subtipo": "facial_oil",
+        "uso": { "paso_rutina": "tratamiento" },
+        "frecuencia": "una noche si una noche no",
+        "descripcion_rutina": {
+          "noche": "Durante las primeras dos semanas de uso, aplicar una capa fina del aceite sobre el rostro y el cuello una vez cada dos días. A partir de la tercera semana, aplicar una vez al día durante la rutina nocturna de cuidado de la piel. Puede utilizarse solo o mezclado con el sérum o la crema.** Se hidrata con pdrn PINK PEPTIDE SERUM ADN de salmón o TOCOBO MULTI CERAMIDE Crean , no se mezcla con vitamina c**"
+        }
+      },
+
+
+
+
+       {
+  "id_odoo": 22516,
+  "nombre_producto": "MEDICUBE PDRN Pink Peptide Eye Cream 30ml",
+  "categoria": "tratamiento",
+  "subtipo": "eye_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "En la última etapa de la rutina de skincare, aplicar una cantidad moderada en el área del contorno de ojos. Dar suaves toques para favorecer la absorción. Fórmula con PDRN de salmón, retinol y péptidos que ayuda a suavizar líneas finas, mejorar la firmeza, reducir la apariencia de ojeras y desinflamar la zona, mientras niacinamida, cafeína y extracto de cúrcuma aportan hidratación y luminosidad."
+  }
+},
+
+{
+  "id_odoo": 22516,
+  "nombre_producto": "TOCOBO Collagen Brightening Eye Gel Cream",
+  "categoria": "tratamiento",
+  "subtipo": "eye_gel_cream",
+  "uso": { "paso_rutina": "tratamiento_contorno_ojos" },
+  "descripcion_rutina": {
+    "día": "Aplicar una cantidad moderada de la crema en gel para ojos sobre el área del contorno y extender suavemente para ayudar a la absorción."
+  }
+},
+
+{
+  "id_odoo": 22655,
+  "nombre_producto": "MEDICUBE COLLAGEN JELLY CREAM 110ml",
+  "categoria": "hidratante",
+  "subtipo": "gel_cream",
+  "uso": {
+    "paso_rutina": "hidratación"
+  },
+  "frecuencia": "uso diario",
+  "descripcion_rutina": {
+    "mañana": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada sobre todo el rostro y dar suaves toques para favorecer la absorción.",
+    "noche": "En el último paso de la rutina de cuidado de la piel, aplicar una cantidad moderada sobre todo el rostro y dar suaves toques para favorecer la absorción."
+  }
+},
+    
+      {
+        "id_odoo": 22662,
+        "nombre_producto": "MEDICUBE PDRN PINK COLLAGEN GEL MASK (4EA)",
+        "categoria": "tratamiento",
+        "subtipo": "gel_mask",
+        "uso": { "paso_rutina": "mascarilla" },
+        "frecuencia": "una vez por semana",
+        "descripcion_rutina": {
+          "noche": "Después de la limpieza, colocar la mascarilla sobre el rostro evitando el área de los ojos y los labios. Dejar actuar entre 1 y 3 horas y retirar. Dar suaves toques con la esencia restante para facilitar su absorción."
+        }
+      }
+    ]
+  }
+}
+  ]
+}
