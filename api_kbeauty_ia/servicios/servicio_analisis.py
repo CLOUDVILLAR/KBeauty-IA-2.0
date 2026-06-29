@@ -169,12 +169,37 @@ def crear_nuevo_analisis(usuario, archivos):
     }
 
 
+def _tabla_existe(nombre_tabla):
+    fila = consultar_uno(
+        """
+        SELECT 1 AS existe
+        FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = %s
+        """,
+        (nombre_tabla,),
+    )
+    return bool(fila)
+
+
+def _columnas_tabla(nombre_tabla):
+    filas = consultar_todos(
+        """
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = %s
+        """,
+        (nombre_tabla,),
+    )
+    return {fila["column_name"] for fila in filas}
+
+
 def obtener_historial(villar_id, limite=20):
-    return consultar_todos(
+    normales = consultar_todos(
         """
         SELECT id, creado_en, resumen_general, tono_piel,
                condicion_principal_detectada, condiciones_detectadas,
-               puntajes, resultado_completo, modo_demo, modelo_ia, version_rubrica
+               puntajes, resultado_completo, modo_demo, modelo_ia, version_rubrica,
+               'app' AS tipo_analisis, 'Resultado' AS vista_destino, false AS pdf_disponible
         FROM analisis_piel
         WHERE villar_id = %s
         ORDER BY creado_en DESC
@@ -182,6 +207,51 @@ def obtener_historial(villar_id, limite=20):
         """,
         (villar_id, limite),
     )
+
+    presenciales = []
+    if _tabla_existe("analisis_presenciales_pdf"):
+        columnas = _columnas_tabla("analisis_presenciales_pdf")
+        if "villar_id" in columnas:
+            presenciales = consultar_todos(
+                """
+                SELECT id, creado_en, titulo AS resumen_general,
+                       NULL AS tono_piel, NULL AS condicion_principal_detectada,
+                       '[]'::jsonb AS condiciones_detectadas,
+                       COALESCE(valores_extraidos, '{}'::jsonb) AS puntajes,
+                       COALESCE(valores_extraidos, '{}'::jsonb) AS resultado_completo,
+                       false AS modo_demo, NULL AS modelo_ia, NULL AS version_rubrica,
+                       'presencial_pdf' AS tipo_analisis, 'pdf' AS vista_destino, true AS pdf_disponible,
+                       etiqueta, archivo_nombre
+                FROM analisis_presenciales_pdf
+                WHERE villar_id = %s
+                ORDER BY creado_en DESC
+                LIMIT %s
+                """,
+                (villar_id, limite),
+            )
+        elif "usuario_id" in columnas:
+            presenciales = consultar_todos(
+                """
+                SELECT app.id, app.creado_en, app.titulo AS resumen_general,
+                       NULL AS tono_piel, NULL AS condicion_principal_detectada,
+                       '[]'::jsonb AS condiciones_detectadas,
+                       COALESCE(app.valores_extraidos, '{}'::jsonb) AS puntajes,
+                       COALESCE(app.valores_extraidos, '{}'::jsonb) AS resultado_completo,
+                       false AS modo_demo, NULL AS modelo_ia, NULL AS version_rubrica,
+                       'presencial_pdf' AS tipo_analisis, 'pdf' AS vista_destino, true AS pdf_disponible,
+                       app.etiqueta, app.archivo_nombre
+                FROM analisis_presenciales_pdf app
+                INNER JOIN usuarios u ON u.id = app.usuario_id
+                WHERE u.villar_id = %s
+                ORDER BY app.creado_en DESC
+                LIMIT %s
+                """,
+                (villar_id, limite),
+            )
+
+    historial = normales + presenciales
+    historial.sort(key=lambda item: item.get("creado_en"), reverse=True)
+    return historial[:limite]
 
 
 def obtener_detalle_analisis(villar_id, analisis_id):

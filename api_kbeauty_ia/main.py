@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config.configuracion import obtener_configuracion
 from base_datos.conexion import probar_conexion
-from rutas import rutas_usuarios, rutas_perfil, rutas_analisis, rutas_rutinas, rutas_evolucion, rutas_odoo, rutas_chat, rutas_analisis_externo
+from rutas import rutas_usuarios, rutas_perfil, rutas_analisis, rutas_rutinas, rutas_evolucion, rutas_odoo, rutas_chat, rutas_analisis_externo, rutas_kbeauty_data
 
 configuracion = obtener_configuracion()
 
@@ -28,6 +28,7 @@ app.include_router(rutas_evolucion.router)
 app.include_router(rutas_odoo.router)
 app.include_router(rutas_chat.router)
 app.include_router(rutas_analisis_externo.router)
+app.include_router(rutas_kbeauty_data.router)
 
 
 @app.get("/")

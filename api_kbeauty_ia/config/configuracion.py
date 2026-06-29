@@ -54,6 +54,9 @@ VILLAR_DO_API_URL = obtener_variable("VILLAR_DO_API_URL", "http://localhost:8100
 VILLAR_DO_CLIENT_ID = obtener_variable("VILLAR_DO_CLIENT_ID", "kbeauty_ia")
 VILLAR_DO_APP_KEY = obtener_variable("VILLAR_DO_APP_KEY", "")
 VILLAR_DO_TIMEOUT_SEGUNDOS = obtener_entero("VILLAR_DO_TIMEOUT_SEGUNDOS", 12)
+# Opcional: token Bearer de Villar.do para enriquecer vistas internas con nombre/correo.
+# Si no se configura, KBEAUTY-DATA funciona igual, pero solo muestra id/villar_id locales.
+VILLAR_DO_ADMIN_TOKEN = obtener_variable("VILLAR_DO_ADMIN_TOKEN", "")
 
 OPENAI_API_KEY = obtener_variable("OPENAI_API_KEY", "")
 OPENAI_MODELO = obtener_variable("OPENAI_MODELO", "gpt-4.1-mini")
@@ -85,6 +88,7 @@ def obtener_configuracion():
         "villar_do_client_id": VILLAR_DO_CLIENT_ID,
         "villar_do_app_key": VILLAR_DO_APP_KEY,
         "villar_do_timeout_segundos": VILLAR_DO_TIMEOUT_SEGUNDOS,
+        "villar_do_admin_token": VILLAR_DO_ADMIN_TOKEN,
         "openai_api_key": OPENAI_API_KEY,
         "openai_modelo": OPENAI_MODELO,
         "openai_modo_demo": OPENAI_MODO_DEMO,
