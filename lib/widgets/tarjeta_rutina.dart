@@ -5,30 +5,50 @@ import '../utilidades/formato.dart';
 import 'tarjeta_base.dart';
 import 'tarjeta_producto.dart';
 
-Widget tarjetaRutina(Map<String, dynamic> rutina) {
-  final bloques = <_MomentoRutina>[
-    const _MomentoRutina(
-      clave: 'mañana',
-      titulo: 'Mañana',
-      subtitulo: 'Protege y prepara la piel para el día.',
-      icono: Icons.wb_sunny_rounded,
-      color: Color(0xFFF59E0B),
-    ),
-    const _MomentoRutina(
-      clave: 'día',
-      titulo: 'Durante el día',
-      subtitulo: 'Mantén hidratación y protección.',
-      icono: Icons.brightness_5_rounded,
-      color: KBeautyColors.rojo,
-    ),
-    const _MomentoRutina(
-      clave: 'noche',
-      titulo: 'Noche',
-      subtitulo: 'Repara, calma y trata mientras descansas.',
-      icono: Icons.nights_stay_rounded,
-      color: Color(0xFF7C3AED),
-    ),
-  ];
+Widget tarjetaRutina(
+  Map<String, dynamic> rutina, {
+  bool unirMananaConDia = false,
+}) {
+  final bloques = unirMananaConDia
+      ? <_MomentoRutina>[
+          const _MomentoRutina(
+            clave: 'día',
+            titulo: 'Día',
+            subtitulo: 'Une los pasos de mañana y día en el mismo orden.',
+            icono: Icons.wb_sunny_rounded,
+            color: KBeautyColors.rojo,
+          ),
+          const _MomentoRutina(
+            clave: 'noche',
+            titulo: 'Noche',
+            subtitulo: 'Repara, calma y trata mientras descansas.',
+            icono: Icons.nights_stay_rounded,
+            color: Color(0xFF7C3AED),
+          ),
+        ]
+      : <_MomentoRutina>[
+          const _MomentoRutina(
+            clave: 'mañana',
+            titulo: 'Mañana',
+            subtitulo: 'Protege y prepara la piel para el día.',
+            icono: Icons.wb_sunny_rounded,
+            color: Color(0xFFF59E0B),
+          ),
+          const _MomentoRutina(
+            clave: 'día',
+            titulo: 'Durante el día',
+            subtitulo: 'Mantén hidratación y protección.',
+            icono: Icons.brightness_5_rounded,
+            color: KBeautyColors.rojo,
+          ),
+          const _MomentoRutina(
+            clave: 'noche',
+            titulo: 'Noche',
+            subtitulo: 'Repara, calma y trata mientras descansas.',
+            icono: Icons.nights_stay_rounded,
+            color: Color(0xFF7C3AED),
+          ),
+        ];
 
   final contenedor = mapaSeguro(rutina['rutina_completa'] ?? rutina['rutina'] ?? rutina);
   final momentos = mapaSeguro(contenedor['rutina'] ?? contenedor);
@@ -36,7 +56,12 @@ Widget tarjetaRutina(Map<String, dynamic> rutina) {
   final tarjetas = <Widget>[];
 
   for (final momento in bloques) {
-    final productos = listaMapas(momentos[momento.clave] ?? rutina[momento.clave]);
+    final productos = unirMananaConDia && momento.clave == 'día'
+        ? <Map<String, dynamic>>[
+            ...listaMapas(momentos['mañana'] ?? momentos['manana'] ?? rutina['mañana'] ?? rutina['manana']),
+            ...listaMapas(momentos['día'] ?? momentos['dia'] ?? rutina['día'] ?? rutina['dia']),
+          ]
+        : listaMapas(momentos[momento.clave] ?? rutina[momento.clave]);
     if (productos.isEmpty) continue;
 
     tarjetas.add(

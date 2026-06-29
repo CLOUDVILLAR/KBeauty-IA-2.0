@@ -152,3 +152,141 @@ def analizar_imagen_piel(bytes_imagen, content_type):
         {"nombre": "lado_izquierdo", "bytes": bytes_imagen, "content_type": content_type},
         {"nombre": "lado_derecho", "bytes": bytes_imagen, "content_type": content_type},
     ])
+
+
+
+def generar_respuesta_chat_kbeauty(mensaje_usuario, contexto, mensajes_previos=None):
+    configuracion = obtener_configuracion()
+    api_key = configuracion.get("openai_api_key")
+    if not api_key or api_key == "pon_tu_openai_api_key_aqui":
+        respuesta_error("OPENAI_API_KEY no esta configurada para el chat IA", 500)
+
+    instrucciones = """
+Eres el chat unico de KBeauty IA. Responde en espanol, con tono claro, cercano y practico.
+Tu objetivo es orientar sobre skincare de forma cosmetica, no diagnosticar enfermedades.
+Usa el contexto clinico-cosmetico disponible: perfil de piel, rutina recomendada, primer analisis y dos ultimos analisis.
+Reglas:
+- No inventes resultados de analisis que no esten en el contexto.
+- Si falta informacion, dilo y pide una accion simple.
+- Da pasos concretos y seguros.
+- Evita indicar medicamentos, tratamientos medicos o diagnosticos. Recomienda dermatologo ante lesiones, dolor, irritacion fuerte, sangrado, alergias o cambios rapidos.
+- Si el usuario pregunta por productos, conecta la respuesta con su rutina guardada cuando exista.
+""".strip()
+
+    historial = []
+    for item in (mensajes_previos or [])[-12:]:
+        rol = item.get("rol")
+        contenido = item.get("contenido")
+        if rol in ("user", "assistant") and contenido:
+            historial.append({"role": rol, "content": str(contenido)[:2500]})
+
+    cliente = OpenAI(api_key=api_key)
+    try:
+        respuesta = cliente.responses.create(
+            model=configuracion["openai_modelo"],
+            input=[
+                {"role": "system", "content": instrucciones},
+                {"role": "system", "content": "Contexto disponible de KBeauty IA:\n" + json.dumps(contexto, ensure_ascii=False, default=str)[:14000]},
+                *historial,
+                {"role": "user", "content": mensaje_usuario},
+            ],
+        )
+    except Exception as exc:
+        logger.exception("[OPENAI] Error al generar respuesta de chat")
+        respuesta_error("No se pudo generar la respuesta del chat IA", 502, {"error": str(exc)[:500]})
+
+    texto = getattr(respuesta, "output_text", None)
+    if not texto:
+        respuesta_error("OpenAI no devolvio respuesta para el chat", 502)
+    return texto.strip()
+
+
+def crear_prompt_analisis_externo_pdf(texto_pdf, rutinas_resumen):
+    return f"""
+Actua como cosmetologa profesional para KBeauty IA. Vas a interpretar un PDF externo de una maquina facial.
+El PDF puede traer metricas con nombres variables, porcentajes, puntajes o textos tecnicos. Tu trabajo es convertirlo a un analisis claro para el usuario y elegir UNA rutina existente.
+
+Reglas importantes:
+- No diagnostiques enfermedades.
+- No inventes productos fuera de las rutinas disponibles.
+- No uses ni asumas perfil del usuario, tipo de piel guardado, rutina actual, historial ni evolucion.
+- Basa TODO el analisis y la rutina recomendada exclusivamente en el texto extraido del PDF.
+- Elige la rutina por el nombre exacto de la lista de rutinas disponibles.
+- Si el PDF no permite concluir algo, coloca null en el campo correspondiente y agrega una nota clara. No inventes datos faltantes.
+- Devuelve solo JSON valido, sin markdown.
+- Los puntajes van de 0 a 100, donde 0 significa sin problema visible o reportado y 100 significa problema muy marcado. Si una metrica no aparece en el PDF, usa null.
+- Para metricas_clave, incluye solo datos que aparezcan o se puedan inferir claramente del PDF. Si falta una metrica importante, ponla en metricas_no_encontradas.
+
+Rutinas disponibles, usa exactamente uno de estos nombres:
+{json.dumps(rutinas_resumen or [], ensure_ascii=False, default=str)}
+
+Texto extraido del PDF externo:
+{(texto_pdf or '')[:18000]}
+
+Formato exacto:
+{{
+  "resumen_general": "texto breve y claro o null",
+  "proveedor_detectado": "nombre de maquina/proveedor si aparece o null",
+  "tipo_piel_estimado": "seca|grasa|mixta|normal|sensible|null",
+  "condicion_principal_detectada": "none|melasma|manchas|acne|arrugas|opaca|anti-age|null",
+  "condiciones_detectadas": ["string"],
+  "metricas_clave": [
+    {{"nombre": "hidratacion", "valor": 0, "unidad": "%", "interpretacion": "texto"}}
+  ],
+  "metricas_no_encontradas": ["string"],
+  "puntajes": {{
+    "poros": null,
+    "manchas_uv_estimadas": null,
+    "manchas_generales": null,
+    "arrugas": null,
+    "elasticidad": null,
+    "textura": null,
+    "rojeces": null,
+    "acne": null,
+    "ojeras": null,
+    "resequedad": null,
+    "grasa": null,
+    "uniformidad_tono": null
+  }},
+  "rutina_recomendada_nombre": "nombre exacto de una rutina disponible",
+  "razon_rutina": "por que esa rutina encaja con los datos encontrados en el PDF",
+  "recomendaciones_generales": ["string"],
+  "notas": ["string"]
+}}
+""".strip()
+
+def analizar_pdf_externo_piel(texto_pdf, rutinas_resumen):
+    configuracion = obtener_configuracion()
+    api_key = configuracion.get("openai_api_key")
+    if not api_key or api_key == "pon_tu_openai_api_key_aqui":
+        respuesta_error("OPENAI_API_KEY no esta configurada. Se requiere OpenAI para interpretar el PDF externo.", 500)
+
+    if not texto_pdf or len(texto_pdf.strip()) < 40:
+        respuesta_error("No se pudo extraer texto suficiente del PDF externo", 422)
+
+    modelo = configuracion["openai_modelo"]
+    logger.info("[OPENAI] Enviando analisis externo PDF con modelo %s", modelo)
+    cliente = OpenAI(api_key=api_key)
+
+    try:
+        respuesta = cliente.responses.create(
+            model=modelo,
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": crear_prompt_analisis_externo_pdf(texto_pdf, rutinas_resumen)},
+                    ],
+                }
+            ],
+        )
+    except Exception as exc:
+        logger.exception("[OPENAI] Error al analizar PDF externo")
+        respuesta_error("No se pudo analizar el PDF externo con OpenAI", 502, {"error": str(exc)[:500]})
+
+    resultado = extraer_json_desde_texto(getattr(respuesta, "output_text", None))
+    resultado["generado_con_ia"] = True
+    resultado["proveedor_ia"] = "openai"
+    resultado["modelo_ia"] = modelo
+    resultado["fuente"] = "pdf_externo"
+    return resultado

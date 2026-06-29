@@ -4,9 +4,11 @@ import '../tema/tema_app.dart';
 import '../utilidades/responsivo.dart';
 import '../widgets/tarjeta_base.dart';
 import 'pantalla_analisis.dart';
+import 'pantalla_analisis_externo.dart';
 import 'pantalla_evolucion.dart';
 import 'pantalla_historial.dart';
 import 'pantalla_cerrando_sesion.dart';
+import 'pantalla_chat_ia.dart';
 import 'pantalla_perfil.dart';
 import 'pantalla_rutina.dart';
 
@@ -34,6 +36,14 @@ class PantallaDashboard extends StatelessWidget {
         color: KBeautyColors.rojo,
         pantalla: const PantallaAnalisis(),
       ),
+
+      _OpcionDashboard(
+        titulo: 'Importar analisis externo',
+        subtitulo: 'PDF facial y rutina IA',
+        icono: Icons.picture_as_pdf_rounded,
+        color: const Color(0xFF14B8A6),
+        pantalla: const PantallaAnalisisExterno(),
+      ),
       _OpcionDashboard(
         titulo: 'Evolución',
         subtitulo: 'Tus avances en el tiempo',
@@ -54,6 +64,13 @@ class PantallaDashboard extends StatelessWidget {
         icono: Icons.spa_rounded,
         color: const Color(0xFF10B981),
         pantalla: const PantallaRutina(),
+      ),
+      _OpcionDashboard(
+        titulo: 'Chat IA',
+        subtitulo: 'Pregunta con tu contexto de piel',
+        icono: Icons.chat_bubble_rounded,
+        color: const Color(0xFFEC4899),
+        pantalla: const PantallaChatIa(),
       ),
       _OpcionDashboard(
         titulo: 'Perfil',

@@ -5,11 +5,11 @@ const String urlApi = String.fromEnvironment(
 
 const String urlVillarDo = String.fromEnvironment(
   'URL_VILLAR_DO',
-  defaultValue: 'http://10.0.0.179:8100',
+  defaultValue: 'http://3.143.67.15:8100/',
 );
 
 const String villarDoAppKey =
-    'villar_sk_prod_iIn_qxp_kw_d3WBnTZgD8xPrXzbU3ZtNVzrpFnPgJ4cuWGuQ';
+    'villar_sk_dev_bdfdsBFgP0FTxulLvSWLAZ4JU6S9DDhq87-dw_l6PJGIXUo8';
 
 const Duration tiempoEsperaApi = Duration(seconds: 90);
 const Duration tiempoEsperaSso = Duration(minutes: 15);
@@ -21,8 +21,8 @@ const String nombreUltimoCallbackVillarDo = 'ultimo_callback_villar_do_procesado
 const String nombreCierreSesionEnCurso = 'cierre_sesion_en_curso_kbeauty';
 const String nombreBloqueoCallbackHasta = 'bloqueo_callback_villar_do_hasta';
 
-const String clienteVillarDo = 'kbeauty_ia_4';
-const String callbackVillarDo = 'villar-kbeauty-ia-4://auth/callback';
+const String clienteVillarDo = 'kbeauty_ia_5';
+const String callbackVillarDo = 'kbeauty://auth/callback';
 
 const String rutaRegistro = '/usuarios/registro';
 const String rutaLogin = '/usuarios/login';
@@ -37,6 +37,8 @@ const String rutaHistorialAnalisis = '/analisis/historial';
 const String rutaRutinaRecomendada = '/rutinas/recomendada';
 const String rutaEvolucionResumen = '/evolucion/resumen';
 const String rutaEvolucionHistorial = '/evolucion/historial';
+const String rutaChatMensajes = '/chat/mensajes';
+const String rutaChatMensaje = '/chat/mensaje';
 
 const String rutaVillarRecuperar = '/api/auth/recuperar';
 const String rutaVillarCambiarPassword = '/api/auth/cambiar-password';
