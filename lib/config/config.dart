@@ -1,11 +1,11 @@
 const String urlApi = String.fromEnvironment(
   'URL_API',
-  defaultValue: 'http://10.0.0.179:8000',
+  defaultValue: 'http://3.143.67.15:8000',
 );
 
 const String urlVillarDo = String.fromEnvironment(
   'URL_VILLAR_DO',
-  defaultValue: 'http://3.143.67.15:8100/',
+  defaultValue: 'https://apps.villar.do/',
 );
 
 const String villarDoAppKey =

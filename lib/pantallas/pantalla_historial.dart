@@ -6,6 +6,7 @@ import '../utilidades/formato.dart';
 import '../utilidades/responsivo.dart';
 import '../widgets/mensaje_estado.dart';
 import '../widgets/tarjeta_base.dart';
+import 'pantalla_pdf_presencial.dart';
 import 'pantalla_resultado_analisis.dart';
 
 class PantallaHistorial extends StatefulWidget {
@@ -31,6 +32,16 @@ class _PantallaHistorialState extends State<PantallaHistorial> {
 
   Future<void> abrirDetalle(Map<String, dynamic> item) async {
     try {
+      if (esAnalisisPresencial(item)) {
+        if (!mounted) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => PantallaPdfPresencial(analisis: item),
+          ),
+        );
+        return;
+      }
+
       final id = textoSeguro(item['id']);
       final detalle = id.isEmpty ? item : await obtenerDetalleAnalisis(id);
       if (!mounted) return;
@@ -100,6 +111,21 @@ class _PantallaHistorialState extends State<PantallaHistorial> {
     if (valor is num) return valor.toDouble();
     final texto = textoSeguro(valor).replaceAll('%', '').replaceAll(',', '.');
     return double.tryParse(texto) ?? 0;
+  }
+
+
+  String _tituloAnalisis(Map<String, dynamic> item, int indice) {
+    if (esAnalisisPresencial(item)) {
+      final titulo = textoSeguro(item['titulo']);
+      return titulo.isEmpty ? 'Análisis presencial' : titulo;
+    }
+    return indice == 0 ? 'Análisis más reciente' : 'Análisis ${indice + 1}';
+  }
+
+  String _resumenPresencial(Map<String, dynamic> item) {
+    final archivo = textoSeguro(item['archivo_nombre']);
+    if (archivo.isNotEmpty) return 'PDF presencial: $archivo';
+    return 'Análisis hecho de forma presencial. Toca para ver el PDF dentro de la app.';
   }
 
   String _estadoPuntaje(double valor) {
@@ -258,11 +284,13 @@ class _PantallaHistorialState extends State<PantallaHistorial> {
                         item: item,
                         indice: indice,
                         fecha: _fecha(item),
-                        resumen: _resumen(item),
+                        titulo: _tituloAnalisis(item, indice),
+                        esPresencial: esAnalisisPresencial(item),
+                        resumen: esAnalisisPresencial(item) ? _resumenPresencial(item) : _resumen(item),
                         puntaje: _puntaje(item),
-                        estado: _estadoPuntaje(_puntaje(item)),
-                        colorEstado: _colorPuntaje(_puntaje(item)),
-                        prioridades: _prioridades(item),
+                        estado: esAnalisisPresencial(item) ? 'PDF' : _estadoPuntaje(_puntaje(item)),
+                        colorEstado: esAnalisisPresencial(item) ? KBeautyColors.rojo : _colorPuntaje(_puntaje(item)),
+                        prioridades: esAnalisisPresencial(item) ? const ['Presencial'] : _prioridades(item),
                         onTap: () => abrirDetalle(item),
                       );
                     }),
@@ -304,6 +332,8 @@ class _TarjetaHistorial extends StatelessWidget {
   const _TarjetaHistorial({
     required this.item,
     required this.indice,
+    required this.titulo,
+    required this.esPresencial,
     required this.fecha,
     required this.resumen,
     required this.puntaje,
@@ -315,6 +345,8 @@ class _TarjetaHistorial extends StatelessWidget {
 
   final Map<String, dynamic> item;
   final int indice;
+  final String titulo;
+  final bool esPresencial;
   final String fecha;
   final String resumen;
   final double puntaje;
@@ -326,6 +358,8 @@ class _TarjetaHistorial extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final esReciente = indice == 0;
+    final colorPrincipal = esPresencial ? KBeautyColors.rojo : (esReciente ? KBeautyColors.rojo : KBeautyColors.textoSuave);
+    final colorFondoIcono = esPresencial ? KBeautyColors.rojoSuave : (esReciente ? KBeautyColors.rojoSuave : const Color(0xFFF3F4F6));
 
     return InkWell(
       borderRadius: BorderRadius.circular(28),
@@ -342,12 +376,12 @@ class _TarjetaHistorial extends StatelessWidget {
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: esReciente ? KBeautyColors.rojoSuave : const Color(0xFFF3F4F6),
+                    color: colorFondoIcono,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Icon(
-                    esReciente ? Icons.stars_rounded : Icons.event_note_rounded,
-                    color: esReciente ? KBeautyColors.rojo : KBeautyColors.textoSuave,
+                    esPresencial ? Icons.picture_as_pdf_rounded : (esReciente ? Icons.stars_rounded : Icons.event_note_rounded),
+                    color: colorPrincipal,
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -359,7 +393,7 @@ class _TarjetaHistorial extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              esReciente ? 'Análisis más reciente' : 'Análisis ${indice + 1}',
+                              titulo,
                               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
                             ),
                           ),
@@ -368,6 +402,10 @@ class _TarjetaHistorial extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(fecha, style: const TextStyle(color: KBeautyColors.textoSuave, fontWeight: FontWeight.w700)),
+                      if (esPresencial) ...[
+                        const SizedBox(height: 8),
+                        const _EtiquetaPresencial(),
+                      ],
                     ],
                   ),
                 ),
@@ -408,6 +446,34 @@ class _TarjetaHistorial extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+
+class _EtiquetaPresencial extends StatelessWidget {
+  const _EtiquetaPresencial();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: KBeautyColors.rojoSuave,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFFFC5C8)),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.storefront_rounded, size: 14, color: KBeautyColors.rojo),
+          SizedBox(width: 5),
+          Text(
+            'Presencial',
+            style: TextStyle(color: KBeautyColors.rojo, fontWeight: FontWeight.w900, fontSize: 12),
+          ),
+        ],
       ),
     );
   }

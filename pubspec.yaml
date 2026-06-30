@@ -17,11 +17,21 @@ dependencies:
   intl: any
   url_launcher: any
   app_links: any
+  syncfusion_flutter_pdfviewer: any
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: any
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
+
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "static/logo.png"
+  adaptive_icon_background: "#FCE8E8"
+  adaptive_icon_foreground: "static/logo.png"

@@ -10,6 +10,7 @@ from servicios.servicio_kbeauty_data import (
     asignar_rol_a_villar_id,
     buscar_clientes,
     construir_url_login_sso,
+    crear_rol,
     codigos_roles,
     exigir_admin,
     exigir_empleado,
@@ -18,8 +19,6 @@ from servicios.servicio_kbeauty_data import (
     intercambiar_codigo_sso,
     listar_roles,
     listar_usuarios_kbeauty,
-    quitar_rol_a_villar_id,
-    eliminar_usuario_kbeauty,
     obtener_pdf_presencial,
     obtener_cliente_kdata,
     usuario_desde_token_web,
@@ -29,6 +28,12 @@ from utilidades.respuestas import respuesta_correcta, respuesta_error
 
 router = APIRouter(tags=["KBEAUTY-DATA"])
 COOKIE = "kbeauty_data_token"
+
+
+def _redirect_login_limpiando_sesion(destino: str):
+    respuesta = RedirectResponse(f"/kbeauty-data/login?next={quote(destino)}", status_code=302)
+    respuesta.delete_cookie(COOKIE)
+    return respuesta
 
 
 def _html_base(titulo, contenido, usuario=None, mostrar_nav=True):
@@ -83,7 +88,7 @@ def _usuario_web_o_redirect(request: Request, destino: str):
     token = request.cookies.get(COOKIE)
     usuario = usuario_desde_token_web(token) if token else None
     if not usuario:
-        return None, RedirectResponse(f"/kbeauty-data/login?next={quote(destino)}", status_code=302)
+        return None, _redirect_login_limpiando_sesion(destino)
     return usuario, None
 
 
@@ -105,7 +110,7 @@ def _usuario_web_o_bearer(request: Request, destino: str = "/kbeauty-data/emplea
         if usuario:
             return usuario, None
 
-    return None, RedirectResponse(f"/kbeauty-data/login?next={quote(destino)}", status_code=302)
+    return None, _redirect_login_limpiando_sesion(destino)
 
 
 @router.get("/kbeauty-data/login")
@@ -129,7 +134,7 @@ def callback_sso(request: Request):
         return HTMLResponse(_html_base("SSO error", "<div class='card'><h1>No se recibio token de Villar.do</h1><p>Revisa el redirect_uri y la configuracion de la App Key.</p></div>"), status_code=400)
     usuario = usuario_desde_token_web(token)
     if not usuario:
-        return HTMLResponse(_html_base("SSO error", "<div class='card'><h1>Token invalido</h1><p>Villar.do no pudo validar la sesion.</p></div>"), status_code=401)
+        return _redirect_login_limpiando_sesion("/kbeauty-data/empleados")
     destino = request.query_params.get("estado") or request.query_params.get("state") or "/kbeauty-data/empleados"
     if not destino.startswith("/kbeauty-data/"):
         destino = "/kbeauty-data/empleados"
@@ -144,183 +149,67 @@ def vista_admin(request: Request, q: str = ""):
     if redireccion:
         return redireccion
     if not usuario_tiene_rol(usuario, ROLES_ADMIN):
-        return HTMLResponse(
-            _html_base(
-                "Sin permiso",
-                "<div class='admin-shell'><div class='empty-card'><h1>Acceso denegado</h1><p>Tu usuario no tiene permiso de administrador para KBEAUTY-DATA.</p><a class='btn ghost' href='/kbeauty-data/empleados'>Ir a empleados</a></div></div>",
-                usuario,
-                mostrar_nav=False,
-            ),
-            status_code=403,
-        )
-
+        return HTMLResponse(_html_base("Sin permiso", "<div class='card'><h1>Acceso denegado</h1><p>Tu usuario no tiene rol admin_kbeauty, admin, administrador o developer.</p></div>", usuario), status_code=403)
     roles = listar_roles()
     usuarios = listar_usuarios_kbeauty(q, token=usuario.get("token_villar_do"), datos_sesion=usuario.get("datos_villar"))
-    opciones_roles = "".join([
-        f"<option value='{escape(r['codigo'])}'>{escape(r['codigo'])}</option>"
-        for r in roles
+    filas_roles = "".join([f"<option value='{escape(r['codigo'])}'>{escape(r['codigo'])} - {escape(r['nombre'])}</option>" for r in roles])
+    filas = "".join([
+        f"""
+        <tr>
+          <td><b>{escape(u.get('villar_nombre') or 'Sin nombre')}</b><br><span class='small'>{escape(u.get('villar_correo') or 'Correo no disponible')}</span><br><span class='small'>{escape(u.get('villar_telefono') or '')}</span>{f"<br><span class='small'>Villar.do: {escape(u.get('villar_error'))}</span>" if u.get('villar_error') else ""}</td>
+          <td><code>{escape(str(u.get('id')))}</code></td>
+          <td><code>{escape(str(u.get('villar_id')))}</code></td>
+          <td>{''.join([f"<span class='pill'>{escape(r.get('codigo',''))}</span>" for r in u.get('roles', [])])}</td>
+          <td>{escape(u.get('tipo_piel') or '')}<br><span class='small'>{escape(u.get('condicion_principal') or '')}</span></td>
+        </tr>
+        """ for u in usuarios
     ])
-
-    tarjetas = []
-    for u in usuarios:
-        villar_id = escape(str(u.get("villar_id") or ""))
-        id_kbeauty = escape(str(u.get("id") or ""))
-        nombre = escape(u.get("villar_nombre") or "Sin nombre")
-        correo = escape(u.get("villar_correo") or "Correo no disponible")
-        telefono = escape(u.get("villar_telefono") or "")
-        inicial = escape((u.get("villar_nombre") or "K")[:1].upper())
-        tipo_piel = escape(u.get("tipo_piel") or "Sin perfil")
-        condicion = escape(u.get("condicion_principal") or "No definida")
-        aviso_villar = ""
-        if u.get("villar_error"):
-            aviso_villar = f"<small class='warn-text'>Villar.do: {escape(str(u.get('villar_error')))}</small>"
-
-        chips_roles = []
-        for rol_usuario in u.get("roles", []):
-            codigo_rol = escape(str(rol_usuario.get("codigo") or ""))
-            chips_roles.append(
-                "<span class='role-chip'>"
-                f"{codigo_rol}"
-                "<form method='post' action='/kbeauty-data/admin/roles/quitar' onsubmit=\"return confirm('Quitar este rol?')\">"
-                f"<input type='hidden' name='villar_id' value='{villar_id}'>"
-                f"<input type='hidden' name='codigo_rol' value='{codigo_rol}'>"
-                "<button type='submit' class='chip-x'>×</button>"
-                "</form>"
-                "</span>"
-            )
-        roles_html = "".join(chips_roles) or "<span class='muted'>Sin roles asignados</span>"
-
-        tarjetas.append(f"""
-        <article class='user-card'>
-          <div class='user-main'>
-            <div class='avatar'>{inicial}</div>
-            <div class='user-info'>
-              <h3>{nombre}</h3>
-              <p>{correo}</p>
-              <small>{telefono}</small>
-              {aviso_villar}
-              <div class='ids'>
-                <span>ID KBeauty: <code>{id_kbeauty}</code></span>
-                <span>Villar ID: <code>{villar_id}</code></span>
-              </div>
-            </div>
-          </div>
-
-          <div class='profile-mini'>
-            <span>Tipo de piel</span><b>{tipo_piel}</b>
-            <span>Condición</span><b>{condicion}</b>
-          </div>
-
-          <div class='roles-box'>
-            <div class='roles-list'>
-              {roles_html}
-            </div>
-            <form class='inline-form' method='post' action='/kbeauty-data/admin/roles/asignar'>
-              <input type='hidden' name='villar_id' value='{villar_id}'>
-              <select name='codigo_rol'>{opciones_roles}</select>
-              <button type='submit'>Añadir rol</button>
-            </form>
-          </div>
-
-          <form class='delete-form' method='post' action='/kbeauty-data/admin/usuarios/eliminar' onsubmit="return confirm('Esto eliminará este usuario de KBeauty y sus datos relacionados. ¿Continuar?')">
-            <input type='hidden' name='villar_id' value='{villar_id}'>
-            <button type='submit'>Eliminar usuario</button>
-          </form>
-        </article>
-        """)
-
-    filas = "".join(tarjetas) or "<div class='empty-card'><h2>No hay usuarios</h2><p>Prueba con otro correo, nombre o Villar ID.</p></div>"
-
     contenido = f"""
-    <style>
-      body {{
-        margin:0;
-        min-height:100vh;
-        font-family: Arial, sans-serif;
-        background:
-          radial-gradient(circle at 12% 8%, rgba(255,255,255,.65), transparent 32%),
-          linear-gradient(160deg,#ffe5ea 0%,#ffd3dc 45%,#ffb8c5 100%);
-        color:#42131b;
-      }}
-      .wrap {{ max-width:1200px; margin:0 auto; padding:0; }}
-      .admin-shell {{ padding:28px; }}
-      .topbar {{ display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:24px; }}
-      .brand {{ display:flex; align-items:center; gap:14px; }}
-      .logo-dot {{ width:46px; height:46px; border-radius:18px; background:linear-gradient(135deg,#f51d37,#ff6d7d); box-shadow:0 14px 30px rgba(245,29,55,.25); }}
-      .brand h1 {{ margin:0; font-size:30px; letter-spacing:-.6px; }}
-      .brand p {{ margin:4px 0 0; color:#8f4350; }}
-      .actions {{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }}
-      .btn, button {{ border:0; border-radius:18px; padding:12px 16px; font-weight:800; cursor:pointer; text-decoration:none; }}
-      .btn.primary, button {{ background:linear-gradient(135deg,#f51d37,#ff6578); color:white; box-shadow:0 14px 28px rgba(245,29,55,.22); }}
-      .btn.ghost {{ background:rgba(255,255,255,.72); color:#f51d37; border:1px solid rgba(245,29,55,.18); }}
-      .search-card {{ background:rgba(255,255,255,.78); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,.75); border-radius:30px; padding:20px; box-shadow:0 18px 45px rgba(121,30,46,.12); margin-bottom:18px; }}
-      .search-card label {{ display:block; font-weight:900; margin-bottom:8px; }}
-      .search-row {{ display:grid; grid-template-columns:1fr auto; gap:12px; }}
-      input, select {{ width:100%; box-sizing:border-box; border:1px solid rgba(245,29,55,.16); border-radius:18px; padding:13px 14px; font-size:15px; outline:none; background:#fff; }}
-      input:focus, select:focus {{ border-color:#f51d37; box-shadow:0 0 0 4px rgba(245,29,55,.10); }}
-      .summary {{ display:flex; gap:10px; flex-wrap:wrap; margin:0 0 18px; }}
-      .summary span {{ background:rgba(255,255,255,.68); border-radius:999px; padding:9px 12px; color:#7c2c39; font-weight:800; }}
-      .users-grid {{ display:grid; grid-template-columns:1fr; gap:16px; }}
-      .user-card {{ background:rgba(255,255,255,.84); border:1px solid rgba(255,255,255,.8); border-radius:28px; padding:18px; box-shadow:0 16px 42px rgba(93,20,35,.12); display:grid; grid-template-columns:1.35fr .55fr .9fr auto; gap:18px; align-items:center; }}
-      .user-main {{ display:flex; gap:14px; align-items:flex-start; min-width:0; }}
-      .avatar {{ flex:0 0 auto; width:50px; height:50px; border-radius:19px; display:grid; place-items:center; background:linear-gradient(135deg,#f51d37,#ff7b8b); color:white; font-weight:900; font-size:20px; }}
-      .user-info h3 {{ margin:0; font-size:18px; }}
-      .user-info p {{ margin:4px 0; color:#7c2c39; font-weight:700; }}
-      .user-info small {{ display:block; color:#9a5a64; }}
-      .warn-text {{ color:#b45309!important; }}
-      .ids {{ margin-top:10px; display:flex; flex-direction:column; gap:4px; color:#87505a; font-size:12px; }}
-      code {{ background:#fff0f3; color:#7f1d2b; padding:3px 6px; border-radius:8px; }}
-      .profile-mini {{ display:grid; grid-template-columns:1fr; gap:4px; color:#89414d; }}
-      .profile-mini span {{ font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; }}
-      .profile-mini b {{ color:#42131b; }}
-      .roles-box {{ display:flex; flex-direction:column; gap:12px; }}
-      .roles-list {{ display:flex; gap:6px; flex-wrap:wrap; }}
-      .role-chip {{ display:inline-flex; align-items:center; gap:5px; background:#fff0f3; color:#c21e35; border:1px solid rgba(245,29,55,.14); padding:7px 9px; border-radius:999px; font-size:12px; font-weight:900; }}
-      .role-chip form {{ display:inline; margin:0; }}
-      .chip-x {{ width:20px; height:20px; padding:0; border-radius:50%; line-height:1; box-shadow:none; background:#f51d37; color:white; margin:0; }}
-      .inline-form {{ display:grid; grid-template-columns:1fr auto; gap:8px; }}
-      .inline-form button {{ margin:0; white-space:nowrap; }}
-      .delete-form button {{ background:#42131b; box-shadow:none; white-space:nowrap; }}
-      .empty-card {{ background:rgba(255,255,255,.78); border-radius:26px; padding:26px; box-shadow:0 18px 45px rgba(121,30,46,.12); }}
-      .muted {{ color:#9a5a64; font-weight:700; }}
-      @media(max-width:980px) {{
-        .user-card {{ grid-template-columns:1fr; }}
-        .search-row {{ grid-template-columns:1fr; }}
-        .topbar {{ align-items:flex-start; flex-direction:column; }}
-      }}
-    </style>
-    <div class='admin-shell'>
-      <section class='topbar'>
-        <div class='brand'>
-          <div class='logo-dot'></div>
-          <div><h1>KBEAUTY-DATA Admin</h1><p>Gestión limpia de usuarios y roles.</p></div>
-        </div>
-        <div class='actions'>
-          <a class='btn ghost' href='/kbeauty-data/empleados'>Vista empleados</a>
-          <a class='btn ghost' href='/kbeauty-data/logout'>Salir</a>
-        </div>
-      </section>
-
-      <section class='summary'>
-        <span>Sesión admin activa</span>
-        <span>Roles: {escape(', '.join(sorted(codigos_roles(usuario))))}</span>
-        <span>{len(usuarios)} usuarios visibles</span>
-      </section>
-
-      <section class='search-card'>
-        <form method='get' action='/kbeauty-data/admin'>
-          <label>Buscar usuario</label>
-          <div class='search-row'>
-            <input name='q' value='{escape(q or '')}' placeholder='Nombre, correo o Villar ID'>
-            <button type='submit'>Buscar</button>
-          </div>
+    <div class='hero'>
+      <h1>KBEAUTY-DATA Admin</h1>
+      <p>Protegido con SSO Villar.do. Vista temporal para crear/asignar roles.</p>
+      <div class='ok'>Login activo con Villar.do usando VILLAR_DO_APP_KEY.</div>
+      <p class='small'>Roles de tu sesion: {escape(', '.join(sorted(codigos_roles(usuario))))}</p>
+    </div>
+    <div class='grid'>
+      <div class='card'>
+        <h2>Crear rol</h2>
+        <form method='post' action='/kbeauty-data/admin/roles/crear'>
+          <label>Codigo</label><input name='codigo' value='kbeauty_data'>
+          <label>Nombre</label><input name='nombre' value='Empleado KBEAUTY-DATA'>
+          <label>Descripcion</label><textarea name='descripcion'>Permite subir analisis presenciales PDF de clientes</textarea>
+          <button>Crear rol</button>
         </form>
-      </section>
-
-      <section class='users-grid'>{filas}</section>
+      </div>
+      <div class='card'>
+        <h2>Asignar rol</h2>
+        <form method='post' action='/kbeauty-data/admin/roles/asignar'>
+          <label>Villar ID del usuario</label><input name='villar_id' placeholder='uuid del usuario'>
+          <label>Rol</label><select name='codigo_rol'>{filas_roles}</select>
+          <button>Asignar rol</button>
+        </form>
+      </div>
+    </div>
+    <div class='card'>
+      <h2>Usuarios KBeauty + datos Villar.do</h2>
+      <form method='get' action='/kbeauty-data/admin'>
+        <label>Buscar por id o Villar ID</label><input name='q' value='{escape(q or '')}' placeholder='uuid'>
+        <button>Buscar</button>
+      </form>
+      <table><thead><tr><th>Usuario Villar.do</th><th>ID KBeauty</th><th>Villar ID</th><th>Roles</th><th>Perfil</th></tr></thead><tbody>{filas}</tbody></table>
     </div>
     """
-    return HTMLResponse(_html_base("KBEAUTY-DATA Admin", contenido, usuario, mostrar_nav=False))
+    return HTMLResponse(_html_base("KBEAUTY-DATA Admin", contenido, usuario))
+
+
+@router.post("/kbeauty-data/admin/roles/crear")
+def accion_crear_rol(request: Request, codigo: str = Form(...), nombre: str = Form(...), descripcion: str = Form("")):
+    usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/admin")
+    if redireccion:
+        return redireccion
+    exigir_admin(usuario)
+    crear_rol(codigo, nombre, descripcion)
+    return RedirectResponse("/kbeauty-data/admin", status_code=303)
 
 
 @router.post("/kbeauty-data/admin/roles/asignar")
@@ -330,36 +219,6 @@ def accion_asignar_rol(request: Request, villar_id: str = Form(...), codigo_rol:
         return redireccion
     exigir_admin(usuario)
     asignar_rol_a_villar_id(villar_id, codigo_rol)
-    return RedirectResponse("/kbeauty-data/admin", status_code=303)
-
-
-@router.post("/kbeauty-data/admin/roles/quitar")
-def accion_quitar_rol(request: Request, villar_id: str = Form(...), codigo_rol: str = Form(...)):
-    usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/admin")
-    if redireccion:
-        return redireccion
-    exigir_admin(usuario)
-    quitar_rol_a_villar_id(villar_id, codigo_rol)
-    return RedirectResponse("/kbeauty-data/admin", status_code=303)
-
-
-@router.post("/kbeauty-data/admin/usuarios/eliminar")
-def accion_eliminar_usuario(request: Request, villar_id: str = Form(...)):
-    usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/admin")
-    if redireccion:
-        return redireccion
-    exigir_admin(usuario)
-    if str(usuario.get("villar_id")) == str(villar_id):
-        return HTMLResponse(
-            _html_base(
-                "No permitido",
-                "<div class='admin-shell'><div class='empty-card'><h1>No puedes eliminar tu propio usuario</h1><p>Usa otro administrador para esa operación.</p><a class='btn ghost' href='/kbeauty-data/admin'>Volver</a></div></div>",
-                usuario,
-                mostrar_nav=False,
-            ),
-            status_code=400,
-        )
-    eliminar_usuario_kbeauty(villar_id)
     return RedirectResponse("/kbeauty-data/admin", status_code=303)
 
 
@@ -640,6 +499,19 @@ def vista_empleados(request: Request):
           : 'Primero selecciona un cliente para activar la subida.';
       }
 
+      async function fetchSeguro(url, opciones = {}) {
+        const res = await fetch(url, opciones);
+        if (res.redirected || (res.url && res.url.includes('/kbeauty-data/login'))) {
+          window.location.href = res.url || '/kbeauty-data/logout';
+          throw new Error('Sesion vencida. Redirigiendo al login...');
+        }
+        if (res.status === 401) {
+          window.location.href = '/kbeauty-data/logout';
+          throw new Error('Sesion vencida. Redirigiendo al login...');
+        }
+        return res;
+      }
+
       input.addEventListener('input', () => {
         const q = input.value.trim();
         clearTimeout(timer);
@@ -651,7 +523,7 @@ def vista_empleados(request: Request):
         sugerencias.innerHTML = `<div class='suggestion'><div><b>Buscando...</b><div class='s-meta'>Un momento</div></div></div>`;
         sugerencias.style.display = 'block';
         try {
-          const res = await fetch(`/kbeauty-data/clientes/buscar?q=${encodeURIComponent(q)}`);
+          const res = await fetchSeguro(`/kbeauty-data/clientes/buscar?q=${encodeURIComponent(q)}`);
           const data = await res.json();
           const items = data.datos || [];
           if (!items.length) {
@@ -681,7 +553,7 @@ def vista_empleados(request: Request):
         estadoInicial.classList.add('hidden');
         layout.style.display = 'grid';
         document.getElementById('listaAnalisis').innerHTML = `<div class='analysis-item'>Cargando cliente...</div>`;
-        const res = await fetch(`/kbeauty-data/clientes/${encodeURIComponent(villarId)}/detalle`);
+        const res = await fetchSeguro(`/kbeauty-data/clientes/${encodeURIComponent(villarId)}/detalle`);
         const data = await res.json();
         if (!data.correcto) { alert(data.mensaje || 'No se pudo cargar'); return; }
         clienteActual = data.datos;
@@ -745,11 +617,11 @@ def vista_empleados(request: Request):
         e.preventDefault();
         if (!clienteActual) { alert('Selecciona un cliente primero.'); return; }
         if (!validarArchivo()) return;
+        const form = new FormData(e.target);
         estadoUpload.textContent = 'Subiendo y analizando PDF...';
         setSubidaActiva(true);
-        const form = new FormData(e.target);
         try {
-          const res = await fetch('/kbeauty-data/analisis-presencial/subir', { method:'POST', body:form });
+          const res = await fetchSeguro('/kbeauty-data/analisis-presencial/subir', { method:'POST', body:form });
           const data = await res.json();
           if (!res.ok || !data.correcto) throw new Error((data.detail && data.detail.mensaje) || data.mensaje || 'Error subiendo PDF');
           estadoUpload.textContent = 'PDF subido correctamente.';
@@ -781,7 +653,7 @@ def subir_pdf_web(request: Request, villar_id: str = Form(...), perfil_id: str =
 def api_detalle_cliente_kdata(request: Request, villar_id: str):
     usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/empleados")
     if redireccion:
-        respuesta_error("Sesion web requerida", 401)
+        return redireccion
     exigir_empleado(usuario)
     return respuesta_correcta(
         "Cliente encontrado",
@@ -793,7 +665,7 @@ def api_detalle_cliente_kdata(request: Request, villar_id: str):
 def api_buscar_clientes(request: Request, q: str = Query(..., min_length=1)):
     usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/empleados")
     if redireccion:
-        respuesta_error("Sesion web requerida", 401)
+        return redireccion
     exigir_empleado(usuario)
     return respuesta_correcta("Clientes encontrados", buscar_clientes(q, token=usuario.get("token_villar_do"), datos_sesion=usuario.get("datos_villar")))
 
@@ -802,7 +674,7 @@ def api_buscar_clientes(request: Request, q: str = Query(..., min_length=1)):
 def api_subir_pdf(request: Request, villar_id: str = Form(...), perfil_id: str = Form(None), notas: str = Form(""), archivo: UploadFile = File(...)):
     usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/empleados")
     if redireccion:
-        respuesta_error("Sesion web requerida", 401)
+        return redireccion
     exigir_empleado(usuario)
     registro = guardar_pdf_presencial(villar_id, usuario.get("villar_id"), archivo, perfil_id=perfil_id or None, notas=notas)
     return respuesta_correcta("PDF presencial subido", registro)
@@ -812,7 +684,7 @@ def api_subir_pdf(request: Request, villar_id: str = Form(...), perfil_id: str =
 def api_detalle_presencial(request: Request, analisis_id: str):
     usuario, redireccion = _usuario_web_o_bearer(request, "/kbeauty-data/empleados")
     if redireccion:
-        respuesta_error("Sesion requerida", 401)
+        return redireccion
     fila = obtener_pdf_presencial(analisis_id, usuario)
     return respuesta_correcta("Analisis presencial", fila)
 
@@ -821,7 +693,7 @@ def api_detalle_presencial(request: Request, analisis_id: str):
 def api_ver_pdf_presencial(request: Request, analisis_id: str):
     usuario, redireccion = _usuario_web_o_bearer(request, "/kbeauty-data/empleados")
     if redireccion:
-        respuesta_error("Sesion requerida", 401)
+        return redireccion
     fila = obtener_pdf_presencial(analisis_id, usuario)
     return FileResponse(
         fila["archivo_ruta"],
