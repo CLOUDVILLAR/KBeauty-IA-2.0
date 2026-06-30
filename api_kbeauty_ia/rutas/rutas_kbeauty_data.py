@@ -1,3 +1,4 @@
+import json
 from html import escape
 from urllib.parse import quote
 
@@ -10,6 +11,7 @@ from servicios.servicio_kbeauty_data import (
     asignar_rol_a_villar_id,
     buscar_clientes,
     construir_url_login_sso,
+    crear_rol,
     codigos_roles,
     exigir_admin,
     exigir_empleado,
@@ -18,13 +20,12 @@ from servicios.servicio_kbeauty_data import (
     intercambiar_codigo_sso,
     listar_roles,
     listar_usuarios_kbeauty,
-    quitar_rol_a_villar_id,
-    eliminar_usuario_kbeauty,
     obtener_pdf_presencial,
     obtener_cliente_kdata,
     usuario_desde_token_web,
     usuario_tiene_rol,
 )
+from servicios.servicio_rutinas import listar_rutinas
 from utilidades.respuestas import respuesta_correcta, respuesta_error
 
 router = APIRouter(tags=["KBEAUTY-DATA"])
@@ -150,154 +151,67 @@ def vista_admin(request: Request, q: str = ""):
     if redireccion:
         return redireccion
     if not usuario_tiene_rol(usuario, ROLES_ADMIN):
-        return HTMLResponse(
-            _html_base(
-                "Sin permiso",
-                "<div class='admin-shell'><div class='empty-card'><h1>Acceso denegado</h1><p>Tu usuario no tiene permiso de administrador para KBEAUTY-DATA.</p><a class='btn ghost' href='/kbeauty-data/empleados'>Ir a empleados</a></div></div>",
-                usuario,
-                mostrar_nav=False,
-            ),
-            status_code=403,
-        )
-
+        return HTMLResponse(_html_base("Sin permiso", "<div class='card'><h1>Acceso denegado</h1><p>Tu usuario no tiene rol admin_kbeauty, admin, administrador o developer.</p></div>", usuario), status_code=403)
     roles = listar_roles()
     usuarios = listar_usuarios_kbeauty(q, token=usuario.get("token_villar_do"), datos_sesion=usuario.get("datos_villar"))
-    opciones_roles = "".join([
-        f"<option value='{escape(r['codigo'])}'>{escape(r['codigo'])}</option>"
-        for r in roles
-    ])
-
+    filas_roles = "".join([f"<option value='{escape(r['codigo'])}'>{escape(r['codigo'])} - {escape(r['nombre'])}</option>" for r in roles])
     filas = "".join([
         f"""
-        <article class='user-card'>
-          <div class='user-main'>
-            <div class='avatar'>{escape((u.get('villar_nombre') or 'K')[:1].upper())}</div>
-            <div class='user-info'>
-              <h3>{escape(u.get('villar_nombre') or 'Sin nombre')}</h3>
-              <p>{escape(u.get('villar_correo') or 'Correo no disponible')}</p>
-              <small>{escape(u.get('villar_telefono') or '')}</small>
-              {f"<small class='warn-text'>Villar.do: {escape(u.get('villar_error'))}</small>" if u.get('villar_error') else ""}
-              <div class='ids'>
-                <span>ID KBeauty: <code>{escape(str(u.get('id')))}</code></span>
-                <span>Villar ID: <code>{escape(str(u.get('villar_id')))}</code></span>
-              </div>
-            </div>
-          </div>
-
-          <div class='profile-mini'>
-            <span>Tipo de piel</span><b>{escape(u.get('tipo_piel') or 'Sin perfil')}</b>
-            <span>Condición</span><b>{escape(u.get('condicion_principal') or 'No definida')}</b>
-          </div>
-
-          <div class='roles-box'>
-            <div class='roles-list'>
-              {''.join([f"<span class='role-chip'>{escape(r.get('codigo',''))}<form method='post' action='/kbeauty-data/admin/roles/quitar' onsubmit=\"return confirm('Quitar este rol?')\"><input type='hidden' name='villar_id' value='{escape(str(u.get('villar_id')))}'><input type='hidden' name='codigo_rol' value='{escape(r.get('codigo',''))}'><button type='submit' class='chip-x'>×</button></form></span>" for r in u.get('roles', [])]) or "<span class='muted'>Sin roles asignados</span>"}
-            </div>
-            <form class='inline-form' method='post' action='/kbeauty-data/admin/roles/asignar'>
-              <input type='hidden' name='villar_id' value='{escape(str(u.get('villar_id')))}'>
-              <select name='codigo_rol'>{opciones_roles}</select>
-              <button type='submit'>Añadir rol</button>
-            </form>
-          </div>
-
-          <form class='delete-form' method='post' action='/kbeauty-data/admin/usuarios/eliminar' onsubmit="return confirm('Esto eliminará este usuario de KBeauty y sus datos relacionados. ¿Continuar?')">
-            <input type='hidden' name='villar_id' value='{escape(str(u.get('villar_id')))}'>
-            <button type='submit'>Eliminar usuario</button>
-          </form>
-        </article>
+        <tr>
+          <td><b>{escape(u.get('villar_nombre') or 'Sin nombre')}</b><br><span class='small'>{escape(u.get('villar_correo') or 'Correo no disponible')}</span><br><span class='small'>{escape(u.get('villar_telefono') or '')}</span>{f"<br><span class='small'>Villar.do: {escape(u.get('villar_error'))}</span>" if u.get('villar_error') else ""}</td>
+          <td><code>{escape(str(u.get('id')))}</code></td>
+          <td><code>{escape(str(u.get('villar_id')))}</code></td>
+          <td>{''.join([f"<span class='pill'>{escape(r.get('codigo',''))}</span>" for r in u.get('roles', [])])}</td>
+          <td>{escape(u.get('tipo_piel') or '')}<br><span class='small'>{escape(u.get('condicion_principal') or '')}</span></td>
+        </tr>
         """ for u in usuarios
-    ]) or "<div class='empty-card'><h2>No hay usuarios</h2><p>Prueba con otro correo, nombre o Villar ID.</p></div>"
-
+    ])
     contenido = f"""
-    <style>
-      body {{
-        margin:0;
-        min-height:100vh;
-        font-family: Arial, sans-serif;
-        background:
-          radial-gradient(circle at 12% 8%, rgba(255,255,255,.65), transparent 32%),
-          linear-gradient(160deg,#ffe5ea 0%,#ffd3dc 45%,#ffb8c5 100%);
-        color:#42131b;
-      }}
-      .wrap {{ max-width:1200px; margin:0 auto; padding:0; }}
-      .admin-shell {{ padding:28px; }}
-      .topbar {{ display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:24px; }}
-      .brand {{ display:flex; align-items:center; gap:14px; }}
-      .logo-dot {{ width:46px; height:46px; border-radius:18px; background:linear-gradient(135deg,#f51d37,#ff6d7d); box-shadow:0 14px 30px rgba(245,29,55,.25); }}
-      .brand h1 {{ margin:0; font-size:30px; letter-spacing:-.6px; }}
-      .brand p {{ margin:4px 0 0; color:#8f4350; }}
-      .actions {{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }}
-      .btn, button {{ border:0; border-radius:18px; padding:12px 16px; font-weight:800; cursor:pointer; text-decoration:none; }}
-      .btn.primary, button {{ background:linear-gradient(135deg,#f51d37,#ff6578); color:white; box-shadow:0 14px 28px rgba(245,29,55,.22); }}
-      .btn.ghost {{ background:rgba(255,255,255,.72); color:#f51d37; border:1px solid rgba(245,29,55,.18); }}
-      .search-card {{ background:rgba(255,255,255,.78); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,.75); border-radius:30px; padding:20px; box-shadow:0 18px 45px rgba(121,30,46,.12); margin-bottom:18px; }}
-      .search-card label {{ display:block; font-weight:900; margin-bottom:8px; }}
-      .search-row {{ display:grid; grid-template-columns:1fr auto; gap:12px; }}
-      input, select {{ width:100%; box-sizing:border-box; border:1px solid rgba(245,29,55,.16); border-radius:18px; padding:13px 14px; font-size:15px; outline:none; background:#fff; }}
-      input:focus, select:focus {{ border-color:#f51d37; box-shadow:0 0 0 4px rgba(245,29,55,.10); }}
-      .summary {{ display:flex; gap:10px; flex-wrap:wrap; margin:0 0 18px; }}
-      .summary span {{ background:rgba(255,255,255,.68); border-radius:999px; padding:9px 12px; color:#7c2c39; font-weight:800; }}
-      .users-grid {{ display:grid; grid-template-columns:1fr; gap:16px; }}
-      .user-card {{ background:rgba(255,255,255,.84); border:1px solid rgba(255,255,255,.8); border-radius:28px; padding:18px; box-shadow:0 16px 42px rgba(93,20,35,.12); display:grid; grid-template-columns:1.35fr .55fr .9fr auto; gap:18px; align-items:center; }}
-      .user-main {{ display:flex; gap:14px; align-items:flex-start; min-width:0; }}
-      .avatar {{ flex:0 0 auto; width:50px; height:50px; border-radius:19px; display:grid; place-items:center; background:linear-gradient(135deg,#f51d37,#ff7b8b); color:white; font-weight:900; font-size:20px; }}
-      .user-info h3 {{ margin:0; font-size:18px; }}
-      .user-info p {{ margin:4px 0; color:#7c2c39; font-weight:700; }}
-      .user-info small {{ display:block; color:#9a5a64; }}
-      .warn-text {{ color:#b45309!important; }}
-      .ids {{ margin-top:10px; display:flex; flex-direction:column; gap:4px; color:#87505a; font-size:12px; }}
-      code {{ background:#fff0f3; color:#7f1d2b; padding:3px 6px; border-radius:8px; }}
-      .profile-mini {{ display:grid; grid-template-columns:1fr; gap:4px; color:#89414d; }}
-      .profile-mini span {{ font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; }}
-      .profile-mini b {{ color:#42131b; }}
-      .roles-box {{ display:flex; flex-direction:column; gap:12px; }}
-      .roles-list {{ display:flex; gap:6px; flex-wrap:wrap; }}
-      .role-chip {{ display:inline-flex; align-items:center; gap:5px; background:#fff0f3; color:#c21e35; border:1px solid rgba(245,29,55,.14); padding:7px 9px; border-radius:999px; font-size:12px; font-weight:900; }}
-      .role-chip form {{ display:inline; margin:0; }}
-      .chip-x {{ width:20px; height:20px; padding:0; border-radius:50%; line-height:1; box-shadow:none; background:#f51d37; color:white; margin:0; }}
-      .inline-form {{ display:grid; grid-template-columns:1fr auto; gap:8px; }}
-      .inline-form button {{ margin:0; white-space:nowrap; }}
-      .delete-form button {{ background:#42131b; box-shadow:none; white-space:nowrap; }}
-      .empty-card {{ background:rgba(255,255,255,.78); border-radius:26px; padding:26px; box-shadow:0 18px 45px rgba(121,30,46,.12); }}
-      .muted {{ color:#9a5a64; font-weight:700; }}
-      @media(max-width:980px) {{
-        .user-card {{ grid-template-columns:1fr; }}
-        .search-row {{ grid-template-columns:1fr; }}
-        .topbar {{ align-items:flex-start; flex-direction:column; }}
-      }}
-    </style>
-    <div class='admin-shell'>
-      <section class='topbar'>
-        <div class='brand'>
-          <div class='logo-dot'></div>
-          <div><h1>KBEAUTY-DATA Admin</h1><p>Gestión limpia de usuarios y roles.</p></div>
-        </div>
-        <div class='actions'>
-          <a class='btn ghost' href='/kbeauty-data/empleados'>Vista empleados</a>
-          <a class='btn ghost' href='/kbeauty-data/logout'>Salir</a>
-        </div>
-      </section>
-
-      <section class='summary'>
-        <span>Sesión admin activa</span>
-        <span>Roles: {escape(', '.join(sorted(codigos_roles(usuario))))}</span>
-        <span>{len(usuarios)} usuarios visibles</span>
-      </section>
-
-      <section class='search-card'>
-        <form method='get' action='/kbeauty-data/admin'>
-          <label>Buscar usuario</label>
-          <div class='search-row'>
-            <input name='q' value='{escape(q or '')}' placeholder='Nombre, correo o Villar ID'>
-            <button type='submit'>Buscar</button>
-          </div>
+    <div class='hero'>
+      <h1>KBEAUTY-DATA Admin</h1>
+      <p>Protegido con SSO Villar.do. Vista temporal para crear/asignar roles.</p>
+      <div class='ok'>Login activo con Villar.do usando VILLAR_DO_APP_KEY.</div>
+      <p class='small'>Roles de tu sesion: {escape(', '.join(sorted(codigos_roles(usuario))))}</p>
+    </div>
+    <div class='grid'>
+      <div class='card'>
+        <h2>Crear rol</h2>
+        <form method='post' action='/kbeauty-data/admin/roles/crear'>
+          <label>Codigo</label><input name='codigo' value='kbeauty_data'>
+          <label>Nombre</label><input name='nombre' value='Empleado KBEAUTY-DATA'>
+          <label>Descripcion</label><textarea name='descripcion'>Permite subir analisis presenciales PDF de clientes</textarea>
+          <button>Crear rol</button>
         </form>
-      </section>
-
-      <section class='users-grid'>{filas}</section>
+      </div>
+      <div class='card'>
+        <h2>Asignar rol</h2>
+        <form method='post' action='/kbeauty-data/admin/roles/asignar'>
+          <label>Villar ID del usuario</label><input name='villar_id' placeholder='uuid del usuario'>
+          <label>Rol</label><select name='codigo_rol'>{filas_roles}</select>
+          <button>Asignar rol</button>
+        </form>
+      </div>
+    </div>
+    <div class='card'>
+      <h2>Usuarios KBeauty + datos Villar.do</h2>
+      <form method='get' action='/kbeauty-data/admin'>
+        <label>Buscar por id o Villar ID</label><input name='q' value='{escape(q or '')}' placeholder='uuid'>
+        <button>Buscar</button>
+      </form>
+      <table><thead><tr><th>Usuario Villar.do</th><th>ID KBeauty</th><th>Villar ID</th><th>Roles</th><th>Perfil</th></tr></thead><tbody>{filas}</tbody></table>
     </div>
     """
-    return HTMLResponse(_html_base("KBEAUTY-DATA Admin", contenido, usuario, mostrar_nav=False))
+    return HTMLResponse(_html_base("KBEAUTY-DATA Admin", contenido, usuario))
+
+
+@router.post("/kbeauty-data/admin/roles/crear")
+def accion_crear_rol(request: Request, codigo: str = Form(...), nombre: str = Form(...), descripcion: str = Form("")):
+    usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/admin")
+    if redireccion:
+        return redireccion
+    exigir_admin(usuario)
+    crear_rol(codigo, nombre, descripcion)
+    return RedirectResponse("/kbeauty-data/admin", status_code=303)
 
 
 @router.post("/kbeauty-data/admin/roles/asignar")
@@ -310,36 +224,6 @@ def accion_asignar_rol(request: Request, villar_id: str = Form(...), codigo_rol:
     return RedirectResponse("/kbeauty-data/admin", status_code=303)
 
 
-@router.post("/kbeauty-data/admin/roles/quitar")
-def accion_quitar_rol(request: Request, villar_id: str = Form(...), codigo_rol: str = Form(...)):
-    usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/admin")
-    if redireccion:
-        return redireccion
-    exigir_admin(usuario)
-    quitar_rol_a_villar_id(villar_id, codigo_rol)
-    return RedirectResponse("/kbeauty-data/admin", status_code=303)
-
-
-@router.post("/kbeauty-data/admin/usuarios/eliminar")
-def accion_eliminar_usuario(request: Request, villar_id: str = Form(...)):
-    usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/admin")
-    if redireccion:
-        return redireccion
-    exigir_admin(usuario)
-    if str(usuario.get("villar_id")) == str(villar_id):
-        return HTMLResponse(
-            _html_base(
-                "No permitido",
-                "<div class='admin-shell'><div class='empty-card'><h1>No puedes eliminar tu propio usuario</h1><p>Usa otro administrador para esa operación.</p><a class='btn ghost' href='/kbeauty-data/admin'>Volver</a></div></div>",
-                usuario,
-                mostrar_nav=False,
-            ),
-            status_code=400,
-        )
-    eliminar_usuario_kbeauty(villar_id)
-    return RedirectResponse("/kbeauty-data/admin", status_code=303)
-
-
 @router.get("/kbeauty-data/empleados", response_class=HTMLResponse)
 def vista_empleados(request: Request):
     usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/empleados")
@@ -347,6 +231,8 @@ def vista_empleados(request: Request):
         return redireccion
     if not usuario_tiene_rol(usuario, ROLES_EMPLEADO):
         return HTMLResponse(_html_base("Sin permiso", "<div class='card'><h1>Acceso denegado</h1><p>Tu usuario no tiene rol kbeauty_data.</p></div>", usuario), status_code=403)
+
+    rutinas_no_app_json = json.dumps(listar_rutinas(), ensure_ascii=False)
 
     contenido = """
     <style>
@@ -408,6 +294,35 @@ def vista_empleados(request: Request):
       .upload-panel.disabled { opacity:.58; }
       .upload-panel.disabled .drop-zone { cursor:not-allowed; }
       .upload-panel.disabled button[type=submit] { opacity:.55; cursor:not-allowed; box-shadow:none; }
+      .modo-panel { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:18px 0 8px; }
+      .modo-btn {
+        border:1px solid #ffe0e5; border-radius:22px; padding:14px 12px; background:#fff;
+        color:#2b2a31; font-weight:950; cursor:pointer; box-shadow:0 12px 26px rgba(245,29,55,.08);
+        text-align:left; transition:.15s;
+      }
+      .modo-btn span { display:block; font-size:20px; margin-bottom:4px; }
+      .modo-btn small { display:block; color:#7d7680; font-weight:800; line-height:1.25; }
+      .modo-btn.active { background:linear-gradient(135deg,#f51d37,#ff6475); color:#fff; border-color:#ff6475; transform:translateY(-1px); }
+      .modo-btn.active small { color:#fff; opacity:.92; }
+      .rutina-rapida-panel { margin-top:20px; padding-top:20px; border-top:1px solid rgba(255, 224, 229, .95); }
+      .rutina-rapida-panel h2 { margin:0; color:#28262d; letter-spacing:-.4px; }
+      .rutina-rapida-panel .upload-hint { margin:7px 0 14px; color:#7b7680; font-size:13px; font-weight:700; line-height:1.4; }
+      .rutina-select { background:#fff; border:1px solid #ffe0e5; border-radius:22px; margin-top:10px; }
+      .rutina-preview { margin-top:12px; padding:14px; border-radius:22px; background:#fff6f8; color:#6b626d; font-size:13px; font-weight:800; line-height:1.45; }
+      .quick-routine { display:grid; gap:18px; }
+      .routine-hero {
+        background:linear-gradient(135deg,#fff,#fff4f6); border:1px solid #ffe0e5;
+        border-radius:34px; padding:24px; box-shadow:0 22px 55px rgba(245,29,55,.10);
+      }
+      .routine-hero h2 { margin:0; color:#28262d; font-size:28px; letter-spacing:-.7px; }
+      .routine-meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+      .routine-block { background:rgba(255,255,255,.82); border:1px solid #ffe0e5; border-radius:30px; padding:20px; box-shadow:0 18px 42px rgba(245,29,55,.08); }
+      .routine-block h3 { margin:0 0 14px; color:#28262d; font-size:21px; }
+      .product-grid { display:grid; gap:12px; }
+      .product-card { background:#fff; border:1px solid #fff0f3; border-radius:22px; padding:15px; }
+      .product-card b { color:#28262d; font-size:15px; }
+      .product-card .small { margin-top:5px; line-height:1.45; }
+      .product-desc { margin-top:8px; color:#615b66; font-size:13px; font-weight:700; line-height:1.45; }
       .kd-hero { text-align:left; padding:0; }
       .kd-title { font-size:30px; font-weight:950; margin:0; letter-spacing:-.9px; color:#28262d; }
       .kd-subtitle { color:#7b7680; margin:8px 0 0; line-height:1.45; font-weight:700; }
@@ -497,16 +412,41 @@ def vista_empleados(request: Request):
       <div class='kd-content'>
         <aside class='search-panel'>
           <div class='kd-hero'>
-            <h1 class='kd-title'>Buscar cliente</h1>
-            <p class='kd-subtitle'>Escribe correo, nombre o Villar ID. Aparecerán coincidencias al instante.</p>
-            <div class='search-wrap'>
-              <div class='search-box'>
-                <span class='search-icon'>🔎</span>
-                <input id='buscadorCliente' autocomplete='off' placeholder='Correo, nombre o Villar ID'>
-              </div>
-              <div id='sugerencias' class='suggestions'></div>
+            <h1 class='kd-title'>Tipo de atención</h1>
+            <p class='kd-subtitle'>Elige si el cliente tiene app o si solo necesita una recomendación rápida de rutina.</p>
+            <div class='modo-panel'>
+              <button id='modoConApp' type='button' class='modo-btn active'><span>📱</span>Con app<small>Buscar cliente y subir PDF.</small></button>
+              <button id='modoSinApp' type='button' class='modo-btn'><span>✨</span>Sin app<small>Elegir rutina del JSON.</small></button>
             </div>
           </div>
+
+          <div id='panelConApp'>
+            <div class='kd-hero'>
+              <h1 class='kd-title'>Buscar cliente</h1>
+              <p class='kd-subtitle'>Escribe correo, nombre o Villar ID. Aparecerán coincidencias al instante.</p>
+              <div class='search-wrap'>
+                <div class='search-box'>
+                  <span class='search-icon'>🔎</span>
+                  <input id='buscadorCliente' autocomplete='off' placeholder='Correo, nombre o Villar ID'>
+                </div>
+                <div id='sugerencias' class='suggestions'></div>
+              </div>
+            </div>
+          </div>
+
+          <div id='panelSinApp' class='rutina-rapida-panel hidden'>
+            <h2>Rutina rápida</h2>
+            <p class='upload-hint'>No usa IA, no guarda análisis y no requiere app. El empleado selecciona una rutina existente del JSON.</p>
+            <label>Seleccionar rutina</label>
+            <select id='selectorRutinaRapida' class='rutina-select'>
+              <option value=''>Selecciona una rutina...</option>
+            </select>
+            <div id='previewRutinaRapida' class='rutina-preview'>Elige una rutina para ver tipo de piel, condición y productos.</div>
+            <div class='upload-row'>
+              <button id='botonVerRutinaRapida' type='button'>Ver rutina</button>
+            </div>
+          </div>
+
           <div id='uploadPanel' class='upload-panel disabled'>
             <h2>Subir PDF presencial</h2>
             <p class='upload-hint' id='uploadHint'>Primero selecciona un cliente para activar la subida.</p>
@@ -532,7 +472,7 @@ def vista_empleados(request: Request):
         </aside>
 
         <section class='work-area'>
-          <div id='estadoInicial' class='empty-state'><b>Selecciona un cliente</b>Su perfil, análisis y subida de PDF aparecerán aquí.</div>
+          <div id='estadoInicial' class='empty-state'><b>Selecciona una opción</b>Usa cliente con app para subir PDF o cliente sin app para mostrar una rutina rápida.</div>
 
           <section id='clienteLayout' class='client-layout'>
         <aside class='profile-card'>
@@ -559,6 +499,8 @@ def vista_empleados(request: Request):
 
         </div>
           </section>
+
+          <section id='rutinaRapidaResultado' class='quick-routine hidden'></section>
         </section>
       </div>
     </section>
@@ -584,11 +526,22 @@ def vista_empleados(request: Request):
       const uploadHint = document.getElementById('uploadHint');
       const uploadSplash = document.getElementById('uploadSplash');
       const botonSubirPdf = document.getElementById('botonSubirPdf');
+      const modoConApp = document.getElementById('modoConApp');
+      const modoSinApp = document.getElementById('modoSinApp');
+      const panelConApp = document.getElementById('panelConApp');
+      const panelSinApp = document.getElementById('panelSinApp');
+      const selectorRutinaRapida = document.getElementById('selectorRutinaRapida');
+      const previewRutinaRapida = document.getElementById('previewRutinaRapida');
+      const botonVerRutinaRapida = document.getElementById('botonVerRutinaRapida');
+      const rutinaRapidaResultado = document.getElementById('rutinaRapidaResultado');
+      const RUTINAS_NO_APP = __RUTINAS_NO_APP_JSON__;
       let timer = null;
       let clienteActual = null;
+      cargarRutinasRapidas();
       actualizarEstadoUploadPorCliente();
 
       function texto(v, fallback='-') { return v === null || v === undefined || v === '' ? fallback : v; }
+      function esc(v) { return texto(v, '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch])); }
       function iniciales(nombre) { return (nombre || 'K').split(' ').map(x => x[0]).join('').slice(0,2).toUpperCase(); }
       function fechaBonita(valor) {
         if (!valor) return '';
@@ -596,6 +549,103 @@ def vista_empleados(request: Request):
         if (Number.isNaN(d.getTime())) return valor;
         return d.toLocaleString();
       }
+
+      function cargarRutinasRapidas() {
+        RUTINAS_NO_APP.forEach((rutina, i) => {
+          const opt = document.createElement('option');
+          opt.value = String(i);
+          opt.textContent = `${rutina.nombre || 'Rutina'} · ${rutina.tipo_piel || 'piel'} · ${rutina.condicion || 'condición'}`;
+          selectorRutinaRapida.appendChild(opt);
+        });
+      }
+
+      function cambiarModo(modo) {
+        const sinApp = modo === 'sin_app';
+        modoConApp.classList.toggle('active', !sinApp);
+        modoSinApp.classList.toggle('active', sinApp);
+        panelConApp.classList.toggle('hidden', sinApp);
+        panelSinApp.classList.toggle('hidden', !sinApp);
+        uploadPanel.classList.toggle('hidden', sinApp);
+        layout.style.display = 'none';
+        rutinaRapidaResultado.classList.add('hidden');
+        estadoInicial.classList.remove('hidden');
+        estadoInicial.innerHTML = sinApp
+          ? `<b>Cliente sin app</b>Selecciona una rutina del catálogo para mostrar la recomendación completa.`
+          : `<b>Selecciona un cliente</b>Su perfil, análisis y subida de PDF aparecerán aquí.`;
+      }
+
+      function obtenerRutinaSeleccionada() {
+        const i = parseInt(selectorRutinaRapida.value, 10);
+        if (Number.isNaN(i)) return null;
+        return RUTINAS_NO_APP[i] || null;
+      }
+
+      function productosPorMomento(rutina, momento) {
+        const bloques = rutina.rutina || {};
+        if (momento === 'dia') {
+          return [...(bloques['mañana'] || []), ...(bloques['día'] || []), ...(bloques['dia'] || [])];
+        }
+        return bloques['noche'] || [];
+      }
+
+      function descripcionProducto(producto, momento) {
+        const d = producto.descripcion_rutina || {};
+        if (momento === 'dia') return d['día'] || d['dia'] || d['mañana'] || d['manana'] || '';
+        return d['noche'] || d['día'] || d['dia'] || '';
+      }
+
+      function renderProductos(productos, momento) {
+        if (!productos.length) return `<div class='analysis-item'><div><b>No hay productos configurados</b><div class='small'>Esta rutina no tiene pasos para este momento.</div></div></div>`;
+        return productos.map((p, idx) => {
+          const paso = (p.uso && p.uso.paso_rutina) ? p.uso.paso_rutina : (p.categoria || 'producto');
+          const desc = descripcionProducto(p, momento);
+          return `<div class='product-card'>
+            <b>${idx + 1}. ${esc(p.nombre_producto || 'Producto')}</b>
+            <div class='small'>${esc(paso)}${p.id_odoo ? ` · ID Odoo: ${esc(String(p.id_odoo))}` : ''}${p.frecuencia ? ` · ${esc(p.frecuencia)}` : ''}</div>
+            ${desc ? `<div class='product-desc'>${esc(desc)}</div>` : ''}
+          </div>`;
+        }).join('');
+      }
+
+      function pintarRutinaRapida(rutina) {
+        const dia = productosPorMomento(rutina, 'dia');
+        const noche = productosPorMomento(rutina, 'noche');
+        estadoInicial.classList.add('hidden');
+        layout.style.display = 'none';
+        rutinaRapidaResultado.classList.remove('hidden');
+        rutinaRapidaResultado.innerHTML = `
+          <div class='routine-hero'>
+            <h2>${esc(rutina.nombre || 'Rutina seleccionada')}</h2>
+            <p class='kd-subtitle'>Recomendación manual seleccionada por el empleado desde el JSON de rutinas. No usa IA y no se guarda en la cuenta de ningún cliente.</p>
+            <div class='routine-meta'>
+              <span class='tag'>Tipo de piel: ${esc(rutina.tipo_piel || 'N/D')}</span>
+              <span class='tag presencial'>Condición: ${esc(rutina.condicion || 'N/D')}</span>
+              <span class='tag'>${dia.length + noche.length} productos</span>
+            </div>
+          </div>
+          <div class='routine-block'>
+            <h3>Rutina de Día</h3>
+            <div class='product-grid'>${renderProductos(dia, 'dia')}</div>
+          </div>
+          <div class='routine-block'>
+            <h3>Rutina de Noche</h3>
+            <div class='product-grid'>${renderProductos(noche, 'noche')}</div>
+          </div>`;
+      }
+
+      modoConApp.addEventListener('click', () => cambiarModo('con_app'));
+      modoSinApp.addEventListener('click', () => cambiarModo('sin_app'));
+      selectorRutinaRapida.addEventListener('change', () => {
+        const rutina = obtenerRutinaSeleccionada();
+        previewRutinaRapida.textContent = rutina
+          ? `${rutina.nombre || 'Rutina'} · Tipo de piel: ${rutina.tipo_piel || 'N/D'} · Condición: ${rutina.condicion || 'N/D'}`
+          : 'Elige una rutina para ver tipo de piel, condición y productos.';
+      });
+      botonVerRutinaRapida.addEventListener('click', () => {
+        const rutina = obtenerRutinaSeleccionada();
+        if (!rutina) { alert('Selecciona una rutina primero.'); return; }
+        pintarRutinaRapida(rutina);
+      });
 
       function setSubidaActiva(activa) {
         uploadSplash.classList.toggle('active', activa);
@@ -754,6 +804,7 @@ def vista_empleados(request: Request):
       });
     </script>
     """
+    contenido = contenido.replace("__RUTINAS_NO_APP_JSON__", rutinas_no_app_json)
     return HTMLResponse(_html_base("KBEAUTY-DATA Empleados", contenido, usuario, mostrar_nav=False))
 
 
