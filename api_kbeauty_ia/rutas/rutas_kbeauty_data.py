@@ -1,9 +1,11 @@
 import json
+import re
+from datetime import datetime
 from html import escape
 from urllib.parse import quote
 
 from fastapi import APIRouter, Request, Form, File, UploadFile, Query
-from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
 
 from servicios.servicio_kbeauty_data import (
     ROLES_ADMIN,
@@ -36,6 +38,197 @@ def _redirect_login_limpiando_sesion(destino: str):
     respuesta = RedirectResponse(f"/kbeauty-data/login?next={quote(destino)}", status_code=302)
     respuesta.delete_cookie(COOKIE)
     return respuesta
+
+
+def _texto_pdf(valor):
+    texto = str(valor or "").replace("\r", " ").replace("\n", " ").strip()
+    texto = texto.replace("•", "-").replace("–", "-").replace("—", "-")
+    texto = texto.encode("latin-1", "replace").decode("latin-1")
+    return texto
+
+
+def _pdf_escape(valor):
+    texto = _texto_pdf(valor)
+    return texto.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+
+def _wrap_pdf(valor, ancho=82):
+    texto = _texto_pdf(valor)
+    palabras = texto.split()
+    lineas = []
+    linea = ""
+    for palabra in palabras:
+        candidato = f"{linea} {palabra}".strip()
+        if len(candidato) > ancho and linea:
+            lineas.append(linea)
+            linea = palabra
+        else:
+            linea = candidato
+    if linea:
+        lineas.append(linea)
+    return lineas or [""]
+
+
+def _producto_pdf_lineas(producto, momento):
+    nombre = producto.get("nombre_producto") or producto.get("nombre") or "Producto"
+    paso = ((producto.get("uso") or {}).get("paso_rutina") or producto.get("categoria") or "producto")
+    id_odoo = producto.get("id_odoo")
+    descripcion = producto.get("descripcion_rutina") or {}
+    if momento == "dia":
+        desc = descripcion.get("día") or descripcion.get("dia") or descripcion.get("mañana") or descripcion.get("manana") or ""
+    else:
+        desc = descripcion.get("noche") or descripcion.get("día") or descripcion.get("dia") or ""
+    subtitulo = f"Paso: {paso}"
+    if id_odoo:
+        subtitulo += f" | ID Odoo: {id_odoo}"
+    return nombre, subtitulo, desc
+
+
+def _productos_momento_pdf(rutina, momento):
+    bloques = (rutina or {}).get("rutina") or {}
+    if momento == "dia":
+        return list(bloques.get("mañana") or []) + list(bloques.get("día") or []) + list(bloques.get("dia") or [])
+    return list(bloques.get("noche") or [])
+
+
+def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
+    """Genera un PDF simple sin dependencias externas.
+
+    Se usa solo para cliente sin app: no guarda datos y no toca la DB.
+    """
+    cliente_nombre = _texto_pdf(cliente_nombre) or "Cliente sin app"
+    cliente_telefono = _texto_pdf(cliente_telefono) or "No indicado"
+    nombre_rutina = _texto_pdf((rutina or {}).get("nombre") or "Rutina KBeauty")
+    tipo_piel = _texto_pdf((rutina or {}).get("tipo_piel") or "N/D")
+    condicion = _texto_pdf((rutina or {}).get("condicion") or "N/D")
+    fecha = datetime.now().strftime("%d/%m/%Y %I:%M %p")
+
+    paginas = []
+    comandos = []
+    y = 742
+
+    def nueva_pagina():
+        nonlocal comandos, y
+        if comandos:
+            paginas.append("\n".join(comandos))
+        comandos = [
+            "0.998 0.945 0.955 rg 0 0 612 792 re f",
+            "0.961 0.114 0.216 rg 0 704 612 88 re f",
+            "1 1 1 rg BT /F2 25 Tf 52 748 Td (KBeauty IA) Tj ET",
+            "1 1 1 rg BT /F1 11 Tf 52 728 Td (Rutina recomendada para cliente sin app) Tj ET",
+            "0.18 0.15 0.18 rg",
+        ]
+        y = 674
+
+    def texto(x, yy, valor, size=10, bold=False, color="0.18 0.15 0.18"):
+        fuente = "/F2" if bold else "/F1"
+        comandos.append(f"{color} rg BT {fuente} {size} Tf {x} {yy} Td ({_pdf_escape(valor)}) Tj ET")
+
+    def rect(x, yy, w, h, color):
+        comandos.append(f"{color} rg {x} {yy} {w} {h} re f")
+
+    def asegurar(altura=42):
+        nonlocal y
+        if y - altura < 54:
+            nueva_pagina()
+
+    def bloque_titulo(titulo):
+        nonlocal y
+        asegurar(46)
+        rect(42, y - 11, 528, 32, "1 1 1")
+        rect(42, y - 11, 7, 32, "0.961 0.114 0.216")
+        texto(58, y, titulo, 14, True, "0.18 0.15 0.18")
+        y -= 42
+
+    def parrafo(valor, x=58, size=9, ancho=88, line_height=13):
+        nonlocal y
+        for linea in _wrap_pdf(valor, ancho):
+            asegurar(line_height + 8)
+            texto(x, y, linea, size, False, "0.34 0.31 0.35")
+            y -= line_height
+
+    nueva_pagina()
+    rect(42, 596, 528, 84, "1 1 1")
+    texto(58, 652, "Cliente", 10, True, "0.45 0.41 0.45")
+    texto(58, 631, cliente_nombre, 18, True, "0.18 0.15 0.18")
+    texto(58, 611, f"Telefono: {cliente_telefono}", 11, False, "0.34 0.31 0.35")
+    texto(362, 652, "Fecha", 10, True, "0.45 0.41 0.45")
+    texto(362, 631, fecha, 12, True, "0.18 0.15 0.18")
+    y = 560
+
+    rect(42, y - 16, 528, 82, "1 1 1")
+    texto(58, y + 38, nombre_rutina, 20, True, "0.961 0.114 0.216")
+    texto(58, y + 14, f"Tipo de piel: {tipo_piel}", 11, True, "0.18 0.15 0.18")
+    texto(300, y + 14, f"Condicion: {condicion}", 11, True, "0.18 0.15 0.18")
+    y -= 58
+
+    bloque_titulo("Rutina de Dia")
+    productos_dia = _productos_momento_pdf(rutina, "dia")
+    if not productos_dia:
+        parrafo("No hay productos configurados para este momento.")
+    for idx, producto in enumerate(productos_dia, 1):
+        nombre, subtitulo, desc = _producto_pdf_lineas(producto, "dia")
+        asegurar(60)
+        texto(58, y, f"{idx}. {nombre}", 11, True, "0.18 0.15 0.18")
+        y -= 15
+        parrafo(subtitulo, x=72, size=8, ancho=74, line_height=11)
+        if desc:
+            parrafo(desc, x=72, size=8, ancho=78, line_height=11)
+        y -= 7
+
+    bloque_titulo("Rutina de Noche")
+    productos_noche = _productos_momento_pdf(rutina, "noche")
+    if not productos_noche:
+        parrafo("No hay productos configurados para este momento.")
+    for idx, producto in enumerate(productos_noche, 1):
+        nombre, subtitulo, desc = _producto_pdf_lineas(producto, "noche")
+        asegurar(60)
+        texto(58, y, f"{idx}. {nombre}", 11, True, "0.18 0.15 0.18")
+        y -= 15
+        parrafo(subtitulo, x=72, size=8, ancho=74, line_height=11)
+        if desc:
+            parrafo(desc, x=72, size=8, ancho=78, line_height=11)
+        y -= 7
+
+    asegurar(58)
+    rect(42, y - 30, 528, 48, "1 0.98 0.985")
+    texto(58, y, "Nota", 10, True, "0.961 0.114 0.216")
+    y -= 14
+    parrafo("Esta recomendacion fue seleccionada manualmente por el empleado desde el catalogo de rutinas KBeauty. No usa IA y no se guarda en la cuenta de ningun cliente.", x=58, size=8, ancho=92, line_height=11)
+
+    if comandos:
+        paginas.append("\n".join(comandos))
+
+    objetos = []
+    objetos.append("<< /Type /Catalog /Pages 2 0 R >>")
+    kids = " ".join(f"{5 + i * 2} 0 R" for i in range(len(paginas)))
+    objetos.append(f"<< /Type /Pages /Kids [{kids}] /Count {len(paginas)} >>")
+    objetos.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+    objetos.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>")
+    for i, contenido in enumerate(paginas):
+        content_obj = 6 + i * 2
+        objetos.append(f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents {content_obj} 0 R >>")
+        stream = contenido.encode("latin-1", "replace")
+        objetos.append(f"<< /Length {len(stream)} >>\nstream\n{stream.decode('latin-1')}\nendstream")
+
+    pdf = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for idx, obj in enumerate(objetos, 1):
+        offsets.append(len(pdf))
+        pdf.extend(f"{idx} 0 obj\n".encode("latin-1"))
+        pdf.extend(obj.encode("latin-1", "replace"))
+        pdf.extend(b"\nendobj\n")
+    xref = len(pdf)
+    pdf.extend(f"xref\n0 {len(objetos)+1}\n0000000000 65535 f \n".encode("latin-1"))
+    for off in offsets[1:]:
+        pdf.extend(f"{off:010d} 00000 n \n".encode("latin-1"))
+    pdf.extend(f"trailer\n<< /Size {len(objetos)+1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF".encode("latin-1"))
+    return bytes(pdf)
+
+
+def _nombre_archivo_seguro(valor):
+    base = re.sub(r"[^A-Za-z0-9_-]+", "_", _texto_pdf(valor).strip())[:48].strip("_")
+    return base or "cliente"
 
 
 def _html_base(titulo, contenido, usuario=None, mostrar_nav=True):
@@ -309,6 +502,12 @@ def vista_empleados(request: Request):
       .rutina-rapida-panel .upload-hint { margin:7px 0 14px; color:#7b7680; font-size:13px; font-weight:700; line-height:1.4; }
       .rutina-select { background:#fff; border:1px solid #ffe0e5; border-radius:22px; margin-top:10px; }
       .rutina-preview { margin-top:12px; padding:14px; border-radius:22px; background:#fff6f8; color:#6b626d; font-size:13px; font-weight:800; line-height:1.45; }
+      .cliente-sin-app-box { display:grid; gap:10px; margin:12px 0 6px; }
+      .cliente-sin-app-box label { margin-top:4px; color:#3a333b; }
+      .cliente-sin-app-box input { background:#fff; border:1px solid #ffe0e5; border-radius:22px; }
+      .download-btn { background:linear-gradient(135deg,#2b2a31,#57515c); box-shadow:0 12px 24px rgba(43,42,49,.18); }
+      .client-summary { background:#fff; border:1px solid #ffe0e5; border-radius:26px; padding:16px; display:grid; gap:4px; }
+      .client-summary b { color:#28262d; font-size:18px; }
       .quick-routine { display:grid; gap:18px; }
       .routine-hero {
         background:linear-gradient(135deg,#fff,#fff4f6); border:1px solid #ffe0e5;
@@ -437,6 +636,12 @@ def vista_empleados(request: Request):
           <div id='panelSinApp' class='rutina-rapida-panel hidden'>
             <h2>Rutina rápida</h2>
             <p class='upload-hint'>No usa IA, no guarda análisis y no requiere app. El empleado selecciona una rutina existente del JSON.</p>
+            <div class='cliente-sin-app-box'>
+              <label>Nombre del cliente</label>
+              <input id='clienteSinAppNombre' type='text' autocomplete='off' placeholder='Ej: María Pérez'>
+              <label>Número de teléfono</label>
+              <input id='clienteSinAppTelefono' type='tel' autocomplete='off' placeholder='Ej: 809-000-0000'>
+            </div>
             <label>Seleccionar rutina</label>
             <select id='selectorRutinaRapida' class='rutina-select'>
               <option value=''>Selecciona una rutina...</option>
@@ -444,6 +649,7 @@ def vista_empleados(request: Request):
             <div id='previewRutinaRapida' class='rutina-preview'>Elige una rutina para ver tipo de piel, condición y productos.</div>
             <div class='upload-row'>
               <button id='botonVerRutinaRapida' type='button'>Ver rutina</button>
+              <button id='botonDescargarRutinaPdf' type='button' class='download-btn'>Descargar PDF</button>
             </div>
           </div>
 
@@ -533,6 +739,9 @@ def vista_empleados(request: Request):
       const selectorRutinaRapida = document.getElementById('selectorRutinaRapida');
       const previewRutinaRapida = document.getElementById('previewRutinaRapida');
       const botonVerRutinaRapida = document.getElementById('botonVerRutinaRapida');
+      const botonDescargarRutinaPdf = document.getElementById('botonDescargarRutinaPdf');
+      const clienteSinAppNombre = document.getElementById('clienteSinAppNombre');
+      const clienteSinAppTelefono = document.getElementById('clienteSinAppTelefono');
       const rutinaRapidaResultado = document.getElementById('rutinaRapidaResultado');
       const RUTINAS_NO_APP = __RUTINAS_NO_APP_JSON__;
       let timer = null;
@@ -607,15 +816,35 @@ def vista_empleados(request: Request):
         }).join('');
       }
 
+      function datosClienteSinApp() {
+        return {
+          nombre: (clienteSinAppNombre.value || '').trim(),
+          telefono: (clienteSinAppTelefono.value || '').trim(),
+        };
+      }
+
+      function validarClienteSinApp() {
+        const datos = datosClienteSinApp();
+        if (!datos.nombre) { alert('Escribe el nombre del cliente.'); clienteSinAppNombre.focus(); return null; }
+        if (!datos.telefono) { alert('Escribe el número de teléfono del cliente.'); clienteSinAppTelefono.focus(); return null; }
+        return datos;
+      }
+
       function pintarRutinaRapida(rutina) {
         const dia = productosPorMomento(rutina, 'dia');
         const noche = productosPorMomento(rutina, 'noche');
+        const datosCliente = datosClienteSinApp();
         estadoInicial.classList.add('hidden');
         layout.style.display = 'none';
         rutinaRapidaResultado.classList.remove('hidden');
         rutinaRapidaResultado.innerHTML = `
           <div class='routine-hero'>
-            <h2>${esc(rutina.nombre || 'Rutina seleccionada')}</h2>
+            <div class='client-summary'>
+              <small>Cliente sin app</small>
+              <b>${esc(datosCliente.nombre || 'Cliente')}</b>
+              <span class='small'>Teléfono: ${esc(datosCliente.telefono || 'No indicado')}</span>
+            </div>
+            <h2 style='margin-top:18px'>${esc(rutina.nombre || 'Rutina seleccionada')}</h2>
             <p class='kd-subtitle'>Recomendación manual seleccionada por el empleado desde el JSON de rutinas. No usa IA y no se guarda en la cuenta de ningún cliente.</p>
             <div class='routine-meta'>
               <span class='tag'>Tipo de piel: ${esc(rutina.tipo_piel || 'N/D')}</span>
@@ -644,7 +873,40 @@ def vista_empleados(request: Request):
       botonVerRutinaRapida.addEventListener('click', () => {
         const rutina = obtenerRutinaSeleccionada();
         if (!rutina) { alert('Selecciona una rutina primero.'); return; }
+        if (!validarClienteSinApp()) return;
         pintarRutinaRapida(rutina);
+      });
+
+      botonDescargarRutinaPdf.addEventListener('click', async () => {
+        const rutina = obtenerRutinaSeleccionada();
+        const datos = validarClienteSinApp();
+        if (!rutina || !datos) { if (!rutina) alert('Selecciona una rutina primero.'); return; }
+        const form = new FormData();
+        form.append('rutina_indice', selectorRutinaRapida.value);
+        form.append('cliente_nombre', datos.nombre);
+        form.append('cliente_telefono', datos.telefono);
+        botonDescargarRutinaPdf.disabled = true;
+        botonDescargarRutinaPdf.textContent = 'Generando PDF...';
+        try {
+          const res = await fetchSeguro('/kbeauty-data/rutina-sin-app/pdf', { method:'POST', body:form });
+          if (!res.ok) throw new Error('No se pudo generar el PDF.');
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          const nombreSeguro = datos.nombre.replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') || 'cliente';
+          a.href = url;
+          a.download = `rutina_kbeauty_${nombreSeguro}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          pintarRutinaRapida(rutina);
+        } catch (err) {
+          alert(err.message || 'No se pudo descargar el PDF.');
+        } finally {
+          botonDescargarRutinaPdf.disabled = false;
+          botonDescargarRutinaPdf.textContent = 'Descargar PDF';
+        }
       });
 
       function setSubidaActiva(activa) {
@@ -806,6 +1068,39 @@ def vista_empleados(request: Request):
     """
     contenido = contenido.replace("__RUTINAS_NO_APP_JSON__", rutinas_no_app_json)
     return HTMLResponse(_html_base("KBEAUTY-DATA Empleados", contenido, usuario, mostrar_nav=False))
+
+
+@router.post("/kbeauty-data/rutina-sin-app/pdf")
+def descargar_rutina_sin_app_pdf(
+    request: Request,
+    rutina_indice: int = Form(...),
+    cliente_nombre: str = Form(...),
+    cliente_telefono: str = Form(...),
+):
+    usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/empleados")
+    if redireccion:
+        return redireccion
+    exigir_empleado(usuario)
+
+    rutinas = listar_rutinas()
+    if rutina_indice < 0 or rutina_indice >= len(rutinas):
+        respuesta_error("Rutina no encontrada", 404)
+
+    nombre = (cliente_nombre or "").strip()
+    telefono = (cliente_telefono or "").strip()
+    if not nombre:
+        respuesta_error("El nombre del cliente es obligatorio", 400)
+    if not telefono:
+        respuesta_error("El numero de telefono del cliente es obligatorio", 400)
+
+    rutina = rutinas[rutina_indice]
+    pdf = _crear_pdf_rutina_no_app(nombre, telefono, rutina)
+    archivo = f"rutina_kbeauty_{_nombre_archivo_seguro(nombre)}.pdf"
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{archivo}"'},
+    )
 
 
 @router.post("/kbeauty-data/analisis-presencial/subir-web")
