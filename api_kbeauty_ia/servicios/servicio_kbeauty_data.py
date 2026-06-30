@@ -163,24 +163,20 @@ def usuario_desde_token_web(token):
     except Exception:
         return None
 
-    if not isinstance(respuesta_villar, dict) or not respuesta_villar.get("valido"):
+    if not respuesta_villar.get("valido"):
         return None
     usuario_villar = dict(respuesta_villar.get("usuario") or {})
     payload = respuesta_villar.get("payload") or {}
     villar_id = usuario_villar.get("villar_id") or payload.get("villar_id") or respuesta_villar.get("villar_id")
-    if not villar_id:
-        return None
-    try:
+    if villar_id:
         # Algunos endpoints devuelven el villar_id solo en el payload. Lo inyectamos
         # para que la vista pueda empatar sesion local con nombre/correo.
         usuario_villar["villar_id"] = str(villar_id)
-        usuario = asegurar_usuario_local(villar_id, usuario_villar)
-        usuario["token_villar_do"] = token
-        usuario["datos_villar"] = usuario_villar
-        usuario["roles"] = obtener_roles_usuario(villar_id)
-        return usuario
-    except Exception:
-        return None
+    usuario = asegurar_usuario_local(villar_id, usuario_villar)
+    usuario["token_villar_do"] = token
+    usuario["datos_villar"] = usuario_villar
+    usuario["roles"] = obtener_roles_usuario(villar_id)
+    return usuario
 
 
 def codigos_roles(usuario):
@@ -248,6 +244,110 @@ def asignar_rol_a_villar_id(villar_id, codigo_rol):
         retornar=True,
     )
 
+
+def quitar_rol_a_villar_id(villar_id, codigo_rol):
+    if not villar_id or not codigo_rol:
+        respuesta_error("villar_id y rol son requeridos", 422)
+    rol = consultar_uno("SELECT * FROM roles WHERE codigo = %s", (codigo_rol,))
+    if not rol:
+        respuesta_error("Rol no existe", 404)
+    ejecutar(
+        "DELETE FROM usuarios_roles WHERE villar_id = %s AND rol_id = %s RETURNING *",
+        (villar_id, rol["id"]),
+        retornar=True,
+    )
+    return True
+
+
+def eliminar_usuario_kbeauty(villar_id):
+    """Elimina un usuario local de KBeauty y sus datos relacionados por villar_id.
+
+    No toca Villar.do. Solo limpia la base local de KBeauty para usuarios viejos,
+    pruebas o clientes que ya fueron borrados en identidad central.
+    """
+    villar_id = str(villar_id or "").strip()
+    if not villar_id:
+        respuesta_error("villar_id requerido", 422)
+
+    usuario = consultar_uno("SELECT * FROM usuarios WHERE villar_id = %s", (villar_id,))
+    if not usuario:
+        respuesta_error("Usuario no existe en KBeauty", 404)
+
+    # Borrar hijos antes del usuario para evitar choques con llaves foraneas.
+    if _tabla_existe_local("productos_recomendados"):
+        ejecutar(
+            """
+            DELETE FROM productos_recomendados
+            WHERE rutina_id IN (
+                SELECT id FROM rutinas_recomendadas WHERE villar_id = %s
+            )
+            RETURNING *
+            """,
+            (villar_id,),
+            retornar=True,
+        )
+
+    if _tabla_existe_local("rutinas_recomendadas"):
+        ejecutar("DELETE FROM rutinas_recomendadas WHERE villar_id = %s RETURNING *", (villar_id,), retornar=True)
+
+    if _tabla_existe_local("analisis_zonas"):
+        ejecutar(
+            """
+            DELETE FROM analisis_zonas
+            WHERE analisis_id IN (
+                SELECT id FROM analisis_piel WHERE villar_id = %s
+            )
+            RETURNING *
+            """,
+            (villar_id,),
+            retornar=True,
+        )
+
+    if _tabla_existe_local("historial_evolucion"):
+        ejecutar("DELETE FROM historial_evolucion WHERE villar_id = %s RETURNING *", (villar_id,), retornar=True)
+
+    if _tabla_existe_local("analisis_piel"):
+        ejecutar("DELETE FROM analisis_piel WHERE villar_id = %s RETURNING *", (villar_id,), retornar=True)
+
+    if _tabla_existe_local("analisis_externos"):
+        ejecutar("DELETE FROM analisis_externos WHERE villar_id = %s RETURNING *", (villar_id,), retornar=True)
+
+    if _tabla_existe_local("analisis_presenciales_pdf"):
+        columnas = _columnas_tabla("analisis_presenciales_pdf")
+        condiciones = []
+        parametros = []
+        if "villar_id" in columnas:
+            condiciones.append("villar_id = %s")
+            parametros.append(villar_id)
+        if "empleado_villar_id" in columnas:
+            condiciones.append("empleado_villar_id = %s")
+            parametros.append(villar_id)
+        if "usuario_id" in columnas:
+            condiciones.append("usuario_id = %s")
+            parametros.append(usuario["id"])
+        if "empleado_id" in columnas:
+            condiciones.append("empleado_id = %s")
+            parametros.append(usuario["id"])
+        if condiciones:
+            ejecutar(
+                f"DELETE FROM analisis_presenciales_pdf WHERE {' OR '.join(condiciones)} RETURNING *",
+                tuple(parametros),
+                retornar=True,
+            )
+
+    if _tabla_existe_local("perfiles_piel"):
+        ejecutar("DELETE FROM perfiles_piel WHERE villar_id = %s RETURNING *", (villar_id,), retornar=True)
+
+    if _tabla_existe_local("chat_ia_mensajes"):
+        ejecutar("DELETE FROM chat_ia_mensajes WHERE villar_id = %s RETURNING *", (villar_id,), retornar=True)
+
+    if _tabla_existe_local("eventos_kbeauty"):
+        ejecutar("DELETE FROM eventos_kbeauty WHERE villar_id = %s RETURNING *", (villar_id,), retornar=True)
+
+    if _tabla_existe_local("usuarios_roles"):
+        ejecutar("DELETE FROM usuarios_roles WHERE villar_id = %s RETURNING *", (villar_id,), retornar=True)
+
+    return ejecutar("DELETE FROM usuarios WHERE villar_id = %s RETURNING *", (villar_id,), retornar=True)
 
 def _get_villar(ruta, token=None):
     headers = {
