@@ -2,7 +2,7 @@ from html import escape
 from urllib.parse import quote
 
 from fastapi import APIRouter, Request, Form, File, UploadFile, Query
-from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse
 
 from servicios.servicio_kbeauty_data import (
     ROLES_ADMIN,
@@ -30,10 +30,44 @@ router = APIRouter(tags=["KBEAUTY-DATA"])
 COOKIE = "kbeauty_data_token"
 
 
-def _redirect_login_limpiando_sesion(destino: str):
+def _redirect_login_limpiando_sesion(destino: str = "/kbeauty-data/empleados"):
     respuesta = RedirectResponse(f"/kbeauty-data/login?next={quote(destino)}", status_code=302)
-    respuesta.delete_cookie(COOKIE)
+    respuesta.delete_cookie(COOKIE, path="/")
+    respuesta.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    respuesta.headers["Pragma"] = "no-cache"
     return respuesta
+
+
+def _respuesta_fetch_sesion_vencida(destino: str = "/kbeauty-data/empleados"):
+    respuesta = JSONResponse(
+        status_code=401,
+        content={
+            "correcto": False,
+            "mensaje": "Sesion vencida. Inicia sesion nuevamente.",
+            "redirigir_login": f"/kbeauty-data/login?next={quote(destino)}",
+        },
+    )
+    respuesta.delete_cookie(COOKIE, path="/")
+    respuesta.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    respuesta.headers["Pragma"] = "no-cache"
+    return respuesta
+
+
+def _es_peticion_fetch(request: Request):
+    acepta = (request.headers.get("accept") or "").lower()
+    solicitado = (request.headers.get("x-requested-with") or "").lower()
+    return (
+        solicitado == "fetch"
+        or "application/json" in acepta
+        or request.url.path.startswith("/kbeauty-data/clientes/")
+        or request.url.path.startswith("/kbeauty-data/analisis-presencial/subir")
+    )
+
+
+def _sesion_vencida(request: Request, destino: str = "/kbeauty-data/empleados"):
+    if _es_peticion_fetch(request):
+        return _respuesta_fetch_sesion_vencida(destino)
+    return _redirect_login_limpiando_sesion(destino)
 
 
 def _html_base(titulo, contenido, usuario=None, mostrar_nav=True):
@@ -86,9 +120,14 @@ def _html_base(titulo, contenido, usuario=None, mostrar_nav=True):
 
 def _usuario_web_o_redirect(request: Request, destino: str):
     token = request.cookies.get(COOKIE)
-    usuario = usuario_desde_token_web(token) if token else None
+    usuario = None
+    if token:
+        try:
+            usuario = usuario_desde_token_web(token)
+        except Exception:
+            usuario = None
     if not usuario:
-        return None, _redirect_login_limpiando_sesion(destino)
+        return None, _sesion_vencida(request, destino)
     return usuario, None
 
 
@@ -99,29 +138,51 @@ def _usuario_web_o_bearer(request: Request, destino: str = "/kbeauty-data/emplea
     Por eso estas rutas publicas de analisis presencial deben soportar ambos caminos.
     """
     token_cookie = request.cookies.get(COOKIE)
-    usuario = usuario_desde_token_web(token_cookie) if token_cookie else None
+    usuario = None
+    if token_cookie:
+        try:
+            usuario = usuario_desde_token_web(token_cookie)
+        except Exception:
+            usuario = None
     if usuario:
         return usuario, None
 
     autorizacion = request.headers.get("authorization") or request.headers.get("Authorization") or ""
     partes = autorizacion.split(None, 1)
     if len(partes) == 2 and partes[0].lower() == "bearer":
-        usuario = usuario_desde_token_web(partes[1].strip())
+        try:
+            usuario = usuario_desde_token_web(partes[1].strip())
+        except Exception:
+            usuario = None
         if usuario:
             return usuario, None
 
-    return None, _redirect_login_limpiando_sesion(destino)
+    return None, _sesion_vencida(request, destino)
+
+
+@router.get("/kbeauty-data")
+@router.get("/kbeauty-data/")
+def inicio_kbeauty_data():
+    return RedirectResponse("/kbeauty-data/empleados", status_code=302)
 
 
 @router.get("/kbeauty-data/login")
 def login_kbeauty_data(next: str = Query("/kbeauty-data/empleados")):
-    return RedirectResponse(construir_url_login_sso(next), status_code=302)
+    respuesta = RedirectResponse(construir_url_login_sso(next), status_code=302)
+    # Siempre limpiamos la cookie vieja antes de iniciar SSO.
+    # Asi un token vencido no vuelve a quedarse pegado en el navegador.
+    respuesta.delete_cookie(COOKIE, path="/")
+    respuesta.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    respuesta.headers["Pragma"] = "no-cache"
+    return respuesta
 
 
 @router.get("/kbeauty-data/logout")
-def logout_kbeauty_data():
-    respuesta = RedirectResponse("/kbeauty-data/login", status_code=302)
-    respuesta.delete_cookie(COOKIE)
+def logout_kbeauty_data(next: str = Query("/kbeauty-data/empleados")):
+    respuesta = RedirectResponse(f"/kbeauty-data/login?next={quote(next)}", status_code=302)
+    respuesta.delete_cookie(COOKIE, path="/")
+    respuesta.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    respuesta.headers["Pragma"] = "no-cache"
     return respuesta
 
 
@@ -139,7 +200,7 @@ def callback_sso(request: Request):
     if not destino.startswith("/kbeauty-data/"):
         destino = "/kbeauty-data/empleados"
     respuesta = RedirectResponse(destino, status_code=302)
-    respuesta.set_cookie(COOKIE, token, httponly=True, samesite="lax", secure=False, max_age=60 * 60 * 24 * 7)
+    respuesta.set_cookie(COOKIE, token, httponly=True, samesite="lax", secure=False, max_age=60 * 60 * 24 * 7, path="/")
     return respuesta
 
 
@@ -499,16 +560,52 @@ def vista_empleados(request: Request):
           : 'Primero selecciona un cliente para activar la subida.';
       }
 
+      function enviarALogin() {
+        window.location.replace('/kbeauty-data/logout?next=/kbeauty-data/empleados');
+      }
+
       async function fetchSeguro(url, opciones = {}) {
-        const res = await fetch(url, opciones);
+        let res;
+        try {
+          const headers = Object.assign({ 'X-Requested-With': 'fetch', 'Accept': 'application/json' }, opciones.headers || {});
+          res = await fetch(url, Object.assign({}, opciones, {
+            headers,
+            credentials: 'same-origin',
+            redirect: 'manual'
+          }));
+        } catch (e) {
+          // Cuando el backend intenta mandarnos al SSO externo dentro de fetch,
+          // algunos navegadores lo bloquean por CORS. En ese caso hacemos
+          // navegacion normal al login para no mostrar errores crudos.
+          enviarALogin();
+          throw new Error('Sesion vencida. Redirigiendo al login...');
+        }
+
+        if (res.type === 'opaqueredirect' || res.status === 0 || res.status === 401 || res.status === 419 || res.status === 440) {
+          enviarALogin();
+          throw new Error('Sesion vencida. Redirigiendo al login...');
+        }
+
         if (res.redirected || (res.url && res.url.includes('/kbeauty-data/login'))) {
-          window.location.href = res.url || '/kbeauty-data/logout';
+          window.location.replace(res.url || '/kbeauty-data/logout?next=/kbeauty-data/empleados');
           throw new Error('Sesion vencida. Redirigiendo al login...');
         }
-        if (res.status === 401) {
-          window.location.href = '/kbeauty-data/logout';
-          throw new Error('Sesion vencida. Redirigiendo al login...');
+
+        const contentType = (res.headers.get('content-type') || '').toLowerCase();
+        if (!res.ok && contentType.includes('application/json')) {
+          try {
+            const copia = res.clone();
+            const data = await copia.json();
+            const textoError = JSON.stringify(data).toLowerCase();
+            if (data.redirigir_login || textoError.includes('token invalido') || textoError.includes('token vencido') || textoError.includes('sesion vencida') || textoError.includes('sesión vencida')) {
+              window.location.replace(data.redirigir_login || '/kbeauty-data/logout?next=/kbeauty-data/empleados');
+              throw new Error('Sesion vencida. Redirigiendo al login...');
+            }
+          } catch (e) {
+            if ((e.message || '').includes('Sesion vencida')) throw e;
+          }
         }
+
         return res;
       }
 

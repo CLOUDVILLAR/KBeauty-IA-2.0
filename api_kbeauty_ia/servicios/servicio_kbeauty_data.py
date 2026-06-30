@@ -163,20 +163,24 @@ def usuario_desde_token_web(token):
     except Exception:
         return None
 
-    if not respuesta_villar.get("valido"):
+    if not isinstance(respuesta_villar, dict) or not respuesta_villar.get("valido"):
         return None
     usuario_villar = dict(respuesta_villar.get("usuario") or {})
     payload = respuesta_villar.get("payload") or {}
     villar_id = usuario_villar.get("villar_id") or payload.get("villar_id") or respuesta_villar.get("villar_id")
-    if villar_id:
+    if not villar_id:
+        return None
+    try:
         # Algunos endpoints devuelven el villar_id solo en el payload. Lo inyectamos
         # para que la vista pueda empatar sesion local con nombre/correo.
         usuario_villar["villar_id"] = str(villar_id)
-    usuario = asegurar_usuario_local(villar_id, usuario_villar)
-    usuario["token_villar_do"] = token
-    usuario["datos_villar"] = usuario_villar
-    usuario["roles"] = obtener_roles_usuario(villar_id)
-    return usuario
+        usuario = asegurar_usuario_local(villar_id, usuario_villar)
+        usuario["token_villar_do"] = token
+        usuario["datos_villar"] = usuario_villar
+        usuario["roles"] = obtener_roles_usuario(villar_id)
+        return usuario
+    except Exception:
+        return None
 
 
 def codigos_roles(usuario):
