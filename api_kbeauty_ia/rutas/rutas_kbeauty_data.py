@@ -42,10 +42,32 @@ def _redirect_login_limpiando_sesion(destino: str):
 
 
 def _texto_pdf(valor):
+    """Limpia texto para PDF usando codificacion Windows-1252.
+
+    El PDF manual necesita WinAnsiEncoding/cp1252 para que acentos como
+    "Después" no terminen como caracteres raros, por ejemplo "DespuØs".
+    """
     texto = str(valor or "").replace("\r", " ").replace("\n", " ").strip()
-    texto = texto.replace("•", "-").replace("–", "-").replace("—", "-")
-    texto = texto.encode("latin-1", "replace").decode("latin-1")
-    return texto
+    reemplazos = {
+        "•": "-",
+        "–": "-",
+        "—": "-",
+        "−": "-",
+        "“": '"',
+        "”": '"',
+        "„": '"',
+        "‘": "'",
+        "’": "'",
+        "‚": "'",
+        "…": "...",
+        " ": " ",
+        "​": "",
+        "﻿": "",
+    }
+    for origen, destino in reemplazos.items():
+        texto = texto.replace(origen, destino)
+    texto = re.sub(r"\s+", " ", texto).strip()
+    return texto.encode("cp1252", "replace").decode("cp1252")
 
 
 def _pdf_escape(valor):
@@ -53,18 +75,69 @@ def _pdf_escape(valor):
     return texto.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
 
-def _wrap_pdf(valor, ancho=82):
+def _pdf_stream_bytes(contenido):
+    return contenido.encode("cp1252", "replace")
+
+
+def _ancho_aprox_pdf(texto, size=9):
+    """Aproximacion conservadora del ancho en puntos para Helvetica.
+
+    Evita que el PDF se coma palabras cuando hay nombres o descripciones largas.
+    """
+    ancho = 0.0
+    for ch in _texto_pdf(texto):
+        if ch in "ilI.,'|!":
+            factor = 0.28
+        elif ch in "mwMW@#%&":
+            factor = 0.88
+        elif ch == " ":
+            factor = 0.30
+        elif ch.isupper():
+            factor = 0.66
+        else:
+            factor = 0.52
+        ancho += size * factor
+    return ancho
+
+
+def _dividir_palabra_pdf(palabra, max_width, size):
+    partes = []
+    actual = ""
+    for ch in palabra:
+        candidato = actual + ch
+        if actual and _ancho_aprox_pdf(candidato, size) > max_width:
+            partes.append(actual)
+            actual = ch
+        else:
+            actual = candidato
+    if actual:
+        partes.append(actual)
+    return partes or [palabra]
+
+
+def _wrap_pdf(valor, ancho=82, size=9, max_width=None):
     texto = _texto_pdf(valor)
+    if not texto:
+        return [""]
+
+    # Compatibilidad: el codigo viejo pasaba ancho como cantidad aproximada
+    # de caracteres. Convertimos eso a puntos para medir mejor.
+    if max_width is None:
+        max_width = max(40, ancho * size * 0.52)
+
     palabras = texto.split()
     lineas = []
     linea = ""
+
     for palabra in palabras:
-        candidato = f"{linea} {palabra}".strip()
-        if len(candidato) > ancho and linea:
-            lineas.append(linea)
-            linea = palabra
-        else:
-            linea = candidato
+        subpartes = _dividir_palabra_pdf(palabra, max_width, size)
+        for parte in subpartes:
+            candidato = f"{linea} {parte}".strip()
+            if linea and _ancho_aprox_pdf(candidato, size) > max_width:
+                lineas.append(linea)
+                linea = parte
+            else:
+                linea = candidato
     if linea:
         lineas.append(linea)
     return lineas or [""]
@@ -143,7 +216,7 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
 
     def parrafo(valor, x=58, size=9, ancho=88, line_height=14, color="0.34 0.31 0.35"):
         nonlocal y
-        for linea_txt in _wrap_pdf(valor, ancho):
+        for linea_txt in _wrap_pdf(valor, ancho, size=size):
             asegurar(line_height + 8)
             texto(x, y, linea_txt, size, False, color)
             y -= line_height
@@ -151,7 +224,7 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
     def etiqueta_valor(x, yy, etiqueta, valor, ancho=34):
         texto(x, yy, etiqueta, 8, True, "0.52 0.47 0.53")
         yy -= 15
-        for i, linea_txt in enumerate(_wrap_pdf(valor, ancho)[:3]):
+        for i, linea_txt in enumerate(_wrap_pdf(valor, ancho, size=11, max_width=210)[:3]):
             texto(x, yy - (i * 14), linea_txt, 11 if i == 0 else 9, True, "0.18 0.15 0.18")
 
     def bloque_titulo(titulo, emoji_texto=""):
@@ -177,7 +250,7 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
     rect(52, y - 22, 508, 3, "1 0.87 0.90")
     texto(68, y + 24, "Rutina seleccionada", 9, True, "0.52 0.47 0.53")
     yy = y + 5
-    for linea_txt in _wrap_pdf(nombre_rutina, 48)[:2]:
+    for linea_txt in _wrap_pdf(nombre_rutina, 48, size=17, max_width=455)[:2]:
         texto(68, yy, linea_txt, 17, True, "0.961 0.114 0.216")
         yy -= 20
     texto(68, y - 35, f"Tipo de piel: {tipo_piel}", 10, True, "0.18 0.15 0.18")
@@ -227,26 +300,26 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
     objetos.append("<< /Type /Catalog /Pages 2 0 R >>")
     kids = " ".join(f"{5 + i * 2} 0 R" for i in range(len(paginas)))
     objetos.append(f"<< /Type /Pages /Kids [{kids}] /Count {len(paginas)} >>")
-    objetos.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
-    objetos.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>")
+    objetos.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>")
+    objetos.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>")
     for i, contenido in enumerate(paginas):
         content_obj = 6 + i * 2
         objetos.append(f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents {content_obj} 0 R >>")
-        stream = contenido.encode("latin-1", "replace")
-        objetos.append(f"<< /Length {len(stream)} >>\nstream\n{stream.decode('latin-1')}\nendstream")
+        stream = _pdf_stream_bytes(contenido)
+        objetos.append(f"<< /Length {len(stream)} >>\nstream\n{stream.decode('cp1252', 'replace')}\nendstream")
 
     pdf = bytearray(b"%PDF-1.4\n")
     offsets = [0]
     for idx, obj in enumerate(objetos, 1):
         offsets.append(len(pdf))
-        pdf.extend(f"{idx} 0 obj\n".encode("latin-1"))
-        pdf.extend(obj.encode("latin-1", "replace"))
+        pdf.extend(f"{idx} 0 obj\n".encode("ascii"))
+        pdf.extend(obj.encode("cp1252", "replace"))
         pdf.extend(b"\nendobj\n")
     xref = len(pdf)
-    pdf.extend(f"xref\n0 {len(objetos)+1}\n0000000000 65535 f \n".encode("latin-1"))
+    pdf.extend(f"xref\n0 {len(objetos)+1}\n0000000000 65535 f \n".encode("ascii"))
     for off in offsets[1:]:
-        pdf.extend(f"{off:010d} 00000 n \n".encode("latin-1"))
-    pdf.extend(f"trailer\n<< /Size {len(objetos)+1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF".encode("latin-1"))
+        pdf.extend(f"{off:010d} 00000 n \n".encode("ascii"))
+    pdf.extend(f"trailer\n<< /Size {len(objetos)+1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF".encode("ascii"))
     return bytes(pdf)
 
 
