@@ -1,3 +1,4 @@
+import io
 import json
 import re
 from datetime import datetime
@@ -148,13 +149,14 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
             y -= line_height
 
     nueva_pagina()
-    rect(42, 596, 528, 84, "1 1 1")
-    texto(58, 652, "Cliente", 10, True, "0.45 0.41 0.45")
-    texto(58, 631, cliente_nombre, 18, True, "0.18 0.15 0.18")
-    texto(58, 611, f"Telefono: {cliente_telefono}", 11, False, "0.34 0.31 0.35")
-    texto(362, 652, "Fecha", 10, True, "0.45 0.41 0.45")
-    texto(362, 631, fecha, 12, True, "0.18 0.15 0.18")
-    y = 560
+    rect(42, 588, 528, 92, "1 1 1")
+    texto(58, 654, "Nombre del cliente", 10, True, "0.45 0.41 0.45")
+    texto(58, 633, cliente_nombre, 18, True, "0.18 0.15 0.18")
+    texto(58, 610, "Numero de telefono", 10, True, "0.45 0.41 0.45")
+    texto(58, 592, cliente_telefono, 14, True, "0.18 0.15 0.18")
+    texto(362, 654, "Fecha", 10, True, "0.45 0.41 0.45")
+    texto(362, 633, fecha, 12, True, "0.18 0.15 0.18")
+    y = 548
 
     rect(42, y - 16, 528, 82, "1 1 1")
     texto(58, y + 38, nombre_rutina, 20, True, "0.961 0.114 0.216")
@@ -225,6 +227,29 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
     pdf.extend(f"trailer\n<< /Size {len(objetos)+1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF".encode("latin-1"))
     return bytes(pdf)
 
+
+
+def _combinar_pdf_rutina_con_maquina(pdf_rutina, archivo_maquina_bytes):
+    """Une primero el PDF generado por KBeauty y luego el PDF de la maquina.
+
+    Requiere pypdf, que ya esta en requirements.txt. Si el PDF de la maquina
+    no es valido, responde error claro sin guardar nada en DB.
+    """
+    if not archivo_maquina_bytes:
+        return pdf_rutina
+    try:
+        from pypdf import PdfReader, PdfWriter
+
+        writer = PdfWriter()
+        for origen in (io.BytesIO(pdf_rutina), io.BytesIO(archivo_maquina_bytes)):
+            reader = PdfReader(origen)
+            for pagina in reader.pages:
+                writer.add_page(pagina)
+        salida = io.BytesIO()
+        writer.write(salida)
+        return salida.getvalue()
+    except Exception:
+        respuesta_error("No se pudo unir el PDF de la maquina. Verifica que el archivo sea un PDF valido.", 400)
 
 def _nombre_archivo_seguro(valor):
     base = re.sub(r"[^A-Za-z0-9_-]+", "_", _texto_pdf(valor).strip())[:48].strip("_")
@@ -500,6 +525,10 @@ def vista_empleados(request: Request):
       .rutina-rapida-panel { margin-top:20px; padding-top:20px; border-top:1px solid rgba(255, 224, 229, .95); }
       .rutina-rapida-panel h2 { margin:0; color:#28262d; letter-spacing:-.4px; }
       .rutina-rapida-panel .upload-hint { margin:7px 0 14px; color:#7b7680; font-size:13px; font-weight:700; line-height:1.4; }
+
+      .pdf-maquina-box { margin-top:14px; padding:14px; border:1px dashed #ff9bac; border-radius:22px; background:#fff8fa; }
+      .pdf-maquina-box input[type=file] { width:100%; padding:12px; border-radius:18px; border:1px solid #ffe0e5; background:#fff; font-weight:800; color:#6b626d; }
+      .pdf-maquina-box .small { display:block; margin-top:8px; color:#8a7f88; font-size:12px; font-weight:750; line-height:1.35; }
       .rutina-select { background:#fff; border:1px solid #ffe0e5; border-radius:22px; margin-top:10px; }
       .rutina-preview { margin-top:12px; padding:14px; border-radius:22px; background:#fff6f8; color:#6b626d; font-size:13px; font-weight:800; line-height:1.45; }
       .cliente-sin-app-box { display:grid; gap:10px; margin:12px 0 6px; }
@@ -641,6 +670,11 @@ def vista_empleados(request: Request):
               <input id='clienteSinAppNombre' type='text' autocomplete='off' placeholder='Ej: María Pérez'>
               <label>Número de teléfono</label>
               <input id='clienteSinAppTelefono' type='tel' autocomplete='off' placeholder='Ej: 809-000-0000'>
+            </div>
+            <div class='pdf-maquina-box'>
+              <label>PDF del análisis de la máquina <span class='small'>(opcional)</span></label>
+              <input id='pdfMaquinaSinApp' type='file' accept='application/pdf,.pdf'>
+              <span class='small'>Si lo subes, el sistema descargará un solo PDF: primero la rutina generada por KBeauty y después el PDF original de la máquina.</span>
             </div>
             <label>Seleccionar rutina</label>
             <select id='selectorRutinaRapida' class='rutina-select'>
@@ -885,6 +919,9 @@ def vista_empleados(request: Request):
         form.append('rutina_indice', selectorRutinaRapida.value);
         form.append('cliente_nombre', datos.nombre);
         form.append('cliente_telefono', datos.telefono);
+        if (pdfMaquinaSinApp && pdfMaquinaSinApp.files && pdfMaquinaSinApp.files.length > 0) {
+          form.append('pdf_maquina', pdfMaquinaSinApp.files[0]);
+        }
         botonDescargarRutinaPdf.disabled = true;
         botonDescargarRutinaPdf.textContent = 'Generando PDF...';
         try {
@@ -1071,11 +1108,12 @@ def vista_empleados(request: Request):
 
 
 @router.post("/kbeauty-data/rutina-sin-app/pdf")
-def descargar_rutina_sin_app_pdf(
+async def descargar_rutina_sin_app_pdf(
     request: Request,
     rutina_indice: int = Form(...),
     cliente_nombre: str = Form(...),
     cliente_telefono: str = Form(...),
+    pdf_maquina: UploadFile = File(None),
 ):
     usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/empleados")
     if redireccion:
@@ -1095,6 +1133,14 @@ def descargar_rutina_sin_app_pdf(
 
     rutina = rutinas[rutina_indice]
     pdf = _crear_pdf_rutina_no_app(nombre, telefono, rutina)
+    if pdf_maquina and pdf_maquina.filename:
+        nombre_pdf = (pdf_maquina.filename or '').lower()
+        if not nombre_pdf.endswith('.pdf'):
+            respuesta_error('El archivo de la maquina debe ser PDF', 400)
+        contenido_maquina = await pdf_maquina.read()
+        if not contenido_maquina.startswith(b'%PDF'):
+            respuesta_error('El archivo de la maquina no parece ser un PDF valido', 400)
+        pdf = _combinar_pdf_rutina_con_maquina(pdf, contenido_maquina)
     archivo = f"rutina_kbeauty_{_nombre_archivo_seguro(nombre)}.pdf"
     return Response(
         content=pdf,
