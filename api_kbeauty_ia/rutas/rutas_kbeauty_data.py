@@ -28,6 +28,7 @@ from servicios.servicio_kbeauty_data import (
     usuario_desde_token_web,
     usuario_tiene_rol,
 )
+from config.configuracion import VILLAR_DO_API_URL, VILLAR_DO_CLIENT_ID
 from servicios.servicio_rutinas import listar_rutinas
 from utilidades.respuestas import respuesta_correcta, respuesta_error
 
@@ -550,6 +551,10 @@ def vista_empleados(request: Request):
         return HTMLResponse(_html_base("Sin permiso", "<div class='card'><h1>Acceso denegado</h1><p>Tu usuario no tiene rol kbeauty_data.</p></div>", usuario), status_code=403)
 
     rutinas_no_app_json = json.dumps(listar_rutinas(), ensure_ascii=False)
+    villar_base = (VILLAR_DO_API_URL or "").strip().rstrip("/")
+    villar_codigo_app = (VILLAR_DO_CLIENT_ID or "").strip().strip("/")
+    enlace_invitacion_villar = f"{villar_base}/i/{villar_codigo_app}" if villar_base and villar_codigo_app else ""
+    enlace_invitacion_villar_html = escape(enlace_invitacion_villar, quote=True)
 
     contenido = """
     <style>
@@ -621,6 +626,35 @@ def vista_empleados(request: Request):
       .modo-btn small { display:block; color:#7d7680; font-weight:800; line-height:1.25; }
       .modo-btn.active { background:linear-gradient(135deg,#f51d37,#ff6475); color:#fff; border-color:#ff6475; transform:translateY(-1px); }
       .modo-btn.active small { color:#fff; opacity:.92; }
+      .invite-card {
+        position:relative; overflow:hidden; margin:16px 0 6px; padding:16px; border-radius:26px;
+        background:linear-gradient(135deg,#fff 0%, #fff4f7 58%, #ffe7ec 100%);
+        border:1px solid rgba(255, 196, 207, .95); box-shadow:0 18px 42px rgba(245,29,55,.10);
+      }
+      .invite-card:before {
+        content:""; position:absolute; right:-42px; top:-54px; width:130px; height:130px; border-radius:999px;
+        background:radial-gradient(circle, rgba(245,29,55,.20), rgba(245,29,55,0) 68%);
+      }
+      .invite-head { display:flex; gap:12px; align-items:flex-start; position:relative; z-index:1; }
+      .invite-icon {
+        width:42px; height:42px; border-radius:17px; display:grid; place-items:center; flex:0 0 auto;
+        background:linear-gradient(135deg,#f51d37,#ff7480); color:#fff; font-size:21px;
+        box-shadow:0 12px 24px rgba(245,29,55,.18);
+      }
+      .invite-title { margin:0; color:#28262d; font-size:16px; letter-spacing:-.2px; }
+      .invite-text { margin:4px 0 0; color:#7b7680; font-size:12px; font-weight:800; line-height:1.35; }
+      .invite-copy-row { display:flex; gap:9px; align-items:center; margin-top:13px; position:relative; z-index:1; }
+      .invite-input {
+        min-width:0; flex:1; height:42px; padding:0 13px; border-radius:18px; border:1px solid #ffe0e5;
+        background:#fff; color:#514b55; font-size:12px; font-weight:850; box-shadow:inset 0 1px 0 rgba(255,255,255,.8);
+      }
+      .copy-btn {
+        border:0 !important; height:42px; padding:0 15px !important; border-radius:18px !important;
+        background:linear-gradient(135deg,#2b2a31,#57515c) !important; color:#fff !important;
+        font-weight:950; cursor:pointer; white-space:nowrap; box-shadow:0 12px 22px rgba(43,42,49,.16) !important;
+      }
+      .copy-btn.copied { background:linear-gradient(135deg,#12a999,#46d5c4) !important; }
+      .invite-empty { margin-top:12px; position:relative; z-index:1; color:#a36b75; font-size:12px; font-weight:850; line-height:1.35; }
       .rutina-rapida-panel { margin-top:20px; padding-top:20px; border-top:1px solid rgba(255, 224, 229, .95); }
       .rutina-rapida-panel h2 { margin:0; color:#28262d; letter-spacing:-.4px; }
       .rutina-rapida-panel .upload-hint { margin:7px 0 14px; color:#7b7680; font-size:13px; font-weight:700; line-height:1.4; }
@@ -765,6 +799,20 @@ def vista_empleados(request: Request):
             <div class='modo-panel'>
               <button id='modoConApp' type='button' class='modo-btn active'><span>📱</span>Con app<small>Buscar cliente y subir PDF.</small></button>
               <button id='modoSinApp' type='button' class='modo-btn'><span>✨</span>Sin app<small>Elegir rutina del JSON.</small></button>
+            </div>
+            <div class='invite-card'>
+              <div class='invite-head'>
+                <span class='invite-icon'>🔗</span>
+                <div>
+                  <h2 class='invite-title'>Enlace de invitación Villar.do</h2>
+                  <p class='invite-text'>Cópialo para enviarlo al cliente y que entre directo a la invitación de KBeauty IA.</p>
+                </div>
+              </div>
+              <div id='inviteCopyBox' class='invite-copy-row'>
+                <input id='enlaceInvitacionVillar' class='invite-input' value='__ENLACE_INVITACION_VILLAR__' readonly>
+                <button id='copiarEnlaceInvitacion' type='button' class='copy-btn'>Copiar</button>
+              </div>
+              <div id='inviteEmptyMsg' class='invite-empty hidden'>Configura VILLAR_DO_API_URL y VILLAR_DO_CLIENT_ID en el .env para mostrar el enlace.</div>
             </div>
           </div>
 
@@ -913,6 +961,38 @@ def vista_empleados(request: Request):
       let clienteActual = null;
       cargarRutinasRapidas();
       actualizarEstadoUploadPorCliente();
+      configurarCopiarInvitacion();
+
+      function configurarCopiarInvitacion() {
+        const enlace = enlaceInvitacionVillar ? enlaceInvitacionVillar.value.trim() : '';
+        if (!enlace) {
+          if (inviteCopyBox) inviteCopyBox.classList.add('hidden');
+          if (inviteEmptyMsg) inviteEmptyMsg.classList.remove('hidden');
+          return;
+        }
+        if (!copiarEnlaceInvitacion) return;
+        copiarEnlaceInvitacion.addEventListener('click', async () => {
+          try {
+            if (navigator.clipboard && window.isSecureContext) {
+              await navigator.clipboard.writeText(enlace);
+            } else {
+              enlaceInvitacionVillar.focus();
+              enlaceInvitacionVillar.select();
+              document.execCommand('copy');
+            }
+            copiarEnlaceInvitacion.textContent = 'Copiado';
+            copiarEnlaceInvitacion.classList.add('copied');
+            setTimeout(() => {
+              copiarEnlaceInvitacion.textContent = 'Copiar';
+              copiarEnlaceInvitacion.classList.remove('copied');
+            }, 1600);
+          } catch (e) {
+            enlaceInvitacionVillar.focus();
+            enlaceInvitacionVillar.select();
+            alert('No se pudo copiar automáticamente. El enlace quedó seleccionado para copiarlo manualmente.');
+          }
+        });
+      }
 
       function texto(v, fallback='-') { return v === null || v === undefined || v === '' ? fallback : v; }
       function esc(v) { return texto(v, '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch])); }
@@ -1331,6 +1411,7 @@ def vista_empleados(request: Request):
     </script>
     """
     contenido = contenido.replace("__RUTINAS_NO_APP_JSON__", rutinas_no_app_json)
+    contenido = contenido.replace("__ENLACE_INVITACION_VILLAR__", enlace_invitacion_villar_html)
     return HTMLResponse(_html_base("KBEAUTY-DATA Empleados", contenido, usuario, mostrar_nav=False))
 
 
