@@ -93,9 +93,10 @@ def _productos_momento_pdf(rutina, momento):
 
 
 def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
-    """Genera un PDF simple sin dependencias externas.
+    """Genera el PDF bonito de rutina para cliente sin app.
 
-    Se usa solo para cliente sin app: no guarda datos y no toca la DB.
+    No guarda datos, no usa IA y se mantiene liviano para poder unirlo rapido
+    con el PDF original de la maquina.
     """
     cliente_nombre = _texto_pdf(cliente_nombre) or "Cliente sin app"
     cliente_telefono = _texto_pdf(cliente_telefono) or "No indicado"
@@ -113,13 +114,15 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
         if comandos:
             paginas.append("\n".join(comandos))
         comandos = [
-            "0.998 0.945 0.955 rg 0 0 612 792 re f",
-            "0.961 0.114 0.216 rg 0 704 612 88 re f",
-            "1 1 1 rg BT /F2 25 Tf 52 748 Td (KBeauty IA) Tj ET",
-            "1 1 1 rg BT /F1 11 Tf 52 728 Td (Rutina recomendada para cliente sin app) Tj ET",
+            "0.998 0.948 0.958 rg 0 0 612 792 re f",
+            "1 1 1 rg 36 36 540 720 re f",
+            "0.961 0.114 0.216 rg 36 682 540 74 re f",
+            "1 0.72 0.76 rg 36 682 540 5 re f",
+            "1 1 1 rg BT /F2 27 Tf 58 724 Td (KBeauty IA) Tj ET",
+            "1 1 1 rg BT /F1 10 Tf 58 706 Td (Rutina presencial para cliente sin app) Tj ET",
             "0.18 0.15 0.18 rg",
         ]
-        y = 674
+        y = 654
 
     def texto(x, yy, valor, size=10, bold=False, color="0.18 0.15 0.18"):
         fuente = "/F2" if bold else "/F1"
@@ -128,41 +131,55 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
     def rect(x, yy, w, h, color):
         comandos.append(f"{color} rg {x} {yy} {w} {h} re f")
 
+    def linea(x1, yy, x2, color="0.98 0.80 0.84"):
+        comandos.append(f"{color} RG {x1} {yy} m {x2} {yy} l S")
+
     def asegurar(altura=42):
         nonlocal y
-        if y - altura < 54:
+        if y - altura < 60:
             nueva_pagina()
 
-    def bloque_titulo(titulo):
+    def parrafo(valor, x=58, size=9, ancho=88, line_height=13, color="0.34 0.31 0.35"):
         nonlocal y
-        asegurar(46)
-        rect(42, y - 11, 528, 32, "1 1 1")
-        rect(42, y - 11, 7, 32, "0.961 0.114 0.216")
-        texto(58, y, titulo, 14, True, "0.18 0.15 0.18")
-        y -= 42
-
-    def parrafo(valor, x=58, size=9, ancho=88, line_height=13):
-        nonlocal y
-        for linea in _wrap_pdf(valor, ancho):
+        for linea_txt in _wrap_pdf(valor, ancho):
             asegurar(line_height + 8)
-            texto(x, y, linea, size, False, "0.34 0.31 0.35")
+            texto(x, y, linea_txt, size, False, color)
             y -= line_height
 
-    nueva_pagina()
-    rect(42, 588, 528, 92, "1 1 1")
-    texto(58, 654, "Nombre del cliente", 10, True, "0.45 0.41 0.45")
-    texto(58, 633, cliente_nombre, 18, True, "0.18 0.15 0.18")
-    texto(58, 610, "Numero de telefono", 10, True, "0.45 0.41 0.45")
-    texto(58, 592, cliente_telefono, 14, True, "0.18 0.15 0.18")
-    texto(362, 654, "Fecha", 10, True, "0.45 0.41 0.45")
-    texto(362, 633, fecha, 12, True, "0.18 0.15 0.18")
-    y = 548
+    def etiqueta_valor(x, yy, etiqueta, valor, ancho=34):
+        texto(x, yy, etiqueta, 8, True, "0.52 0.47 0.53")
+        yy -= 15
+        for i, linea_txt in enumerate(_wrap_pdf(valor, ancho)[:3]):
+            texto(x, yy - (i * 14), linea_txt, 11 if i == 0 else 9, True, "0.18 0.15 0.18")
 
-    rect(42, y - 16, 528, 82, "1 1 1")
-    texto(58, y + 38, nombre_rutina, 20, True, "0.961 0.114 0.216")
-    texto(58, y + 14, f"Tipo de piel: {tipo_piel}", 11, True, "0.18 0.15 0.18")
-    texto(300, y + 14, f"Condicion: {condicion}", 11, True, "0.18 0.15 0.18")
-    y -= 58
+    def bloque_titulo(titulo, emoji_texto=""):
+        nonlocal y
+        asegurar(48)
+        rect(48, y - 10, 516, 34, "1 0.965 0.972")
+        rect(48, y - 10, 7, 34, "0.961 0.114 0.216")
+        texto(64, y, f"{emoji_texto}{titulo}", 14, True, "0.18 0.15 0.18")
+        y -= 44
+
+    nueva_pagina()
+
+    # Datos del cliente en tarjetas separadas para evitar cruces visuales.
+    rect(52, 586, 248, 82, "1 0.985 0.988")
+    rect(312, 586, 248, 82, "1 0.985 0.988")
+    etiqueta_valor(68, 642, "CLIENTE", cliente_nombre, ancho=28)
+    etiqueta_valor(328, 642, "TELEFONO", cliente_telefono, ancho=27)
+    texto(328, 598, f"Fecha: {fecha}", 9, True, "0.52 0.47 0.53")
+
+    y = 548
+    rect(52, y - 22, 508, 78, "1 1 1")
+    rect(52, y - 22, 508, 3, "1 0.87 0.90")
+    texto(68, y + 24, "Rutina seleccionada", 9, True, "0.52 0.47 0.53")
+    yy = y + 5
+    for linea_txt in _wrap_pdf(nombre_rutina, 48)[:2]:
+        texto(68, yy, linea_txt, 17, True, "0.961 0.114 0.216")
+        yy -= 20
+    texto(68, y - 35, f"Tipo de piel: {tipo_piel}", 10, True, "0.18 0.15 0.18")
+    texto(306, y - 35, f"Condicion: {condicion}", 10, True, "0.18 0.15 0.18")
+    y -= 78
 
     bloque_titulo("Rutina de Dia")
     productos_dia = _productos_momento_pdf(rutina, "dia")
@@ -170,13 +187,14 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
         parrafo("No hay productos configurados para este momento.")
     for idx, producto in enumerate(productos_dia, 1):
         nombre, subtitulo, desc = _producto_pdf_lineas(producto, "dia")
-        asegurar(60)
+        asegurar(68)
+        rect(58, y - 8, 494, 2, "1 0.92 0.94")
         texto(58, y, f"{idx}. {nombre}", 11, True, "0.18 0.15 0.18")
         y -= 15
-        parrafo(subtitulo, x=72, size=8, ancho=74, line_height=11)
+        parrafo(subtitulo, x=72, size=8, ancho=76, line_height=11, color="0.52 0.47 0.53")
         if desc:
             parrafo(desc, x=72, size=8, ancho=78, line_height=11)
-        y -= 7
+        y -= 8
 
     bloque_titulo("Rutina de Noche")
     productos_noche = _productos_momento_pdf(rutina, "noche")
@@ -184,19 +202,20 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
         parrafo("No hay productos configurados para este momento.")
     for idx, producto in enumerate(productos_noche, 1):
         nombre, subtitulo, desc = _producto_pdf_lineas(producto, "noche")
-        asegurar(60)
+        asegurar(68)
+        rect(58, y - 8, 494, 2, "1 0.92 0.94")
         texto(58, y, f"{idx}. {nombre}", 11, True, "0.18 0.15 0.18")
         y -= 15
-        parrafo(subtitulo, x=72, size=8, ancho=74, line_height=11)
+        parrafo(subtitulo, x=72, size=8, ancho=76, line_height=11, color="0.52 0.47 0.53")
         if desc:
             parrafo(desc, x=72, size=8, ancho=78, line_height=11)
-        y -= 7
+        y -= 8
 
-    asegurar(58)
-    rect(42, y - 30, 528, 48, "1 0.98 0.985")
-    texto(58, y, "Nota", 10, True, "0.961 0.114 0.216")
+    asegurar(70)
+    rect(52, y - 36, 508, 58, "1 0.965 0.972")
+    texto(68, y, "Nota para entrega", 10, True, "0.961 0.114 0.216")
     y -= 14
-    parrafo("Esta recomendacion fue seleccionada manualmente por el empleado desde el catalogo de rutinas KBeauty. No usa IA y no se guarda en la cuenta de ningun cliente.", x=58, size=8, ancho=92, line_height=11)
+    parrafo("Esta rutina fue seleccionada manualmente por el empleado desde el catalogo KBeauty. El reporte original de la maquina se adjunta despues de esta portada cuando fue cargado.", x=68, size=8, ancho=82, line_height=11)
 
     if comandos:
         paginas.append("\n".join(comandos))
@@ -232,20 +251,24 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
 def _combinar_pdf_rutina_con_maquina(pdf_rutina, archivo_maquina_bytes):
     """Une primero el PDF generado por KBeauty y luego el PDF de la maquina.
 
-    Requiere pypdf, que ya esta en requirements.txt. Si el PDF de la maquina
-    no es valido, responde error claro sin guardar nada en DB.
+    Usa append cuando la version de pypdf lo soporta porque es mas rapido que
+    recorrer pagina por pagina. Si no esta disponible, cae al metodo compatible.
     """
     if not archivo_maquina_bytes:
         return pdf_rutina
     try:
         from pypdf import PdfReader, PdfWriter
 
-        writer = PdfWriter()
-        for origen in (io.BytesIO(pdf_rutina), io.BytesIO(archivo_maquina_bytes)):
-            reader = PdfReader(origen)
-            for pagina in reader.pages:
-                writer.add_page(pagina)
         salida = io.BytesIO()
+        writer = PdfWriter()
+        if hasattr(writer, "append"):
+            writer.append(io.BytesIO(pdf_rutina))
+            writer.append(io.BytesIO(archivo_maquina_bytes))
+        else:
+            for origen in (io.BytesIO(pdf_rutina), io.BytesIO(archivo_maquina_bytes)):
+                reader = PdfReader(origen, strict=False)
+                for pagina in reader.pages:
+                    writer.add_page(pagina)
         writer.write(salida)
         return salida.getvalue()
     except Exception:
@@ -535,6 +558,13 @@ def vista_empleados(request: Request):
       .cliente-sin-app-box label { margin-top:4px; color:#3a333b; }
       .cliente-sin-app-box input { background:#fff; border:1px solid #ffe0e5; border-radius:22px; }
       .download-btn { background:linear-gradient(135deg,#2b2a31,#57515c); box-shadow:0 12px 24px rgba(43,42,49,.18); }
+      .download-btn:disabled, .download-btn.disabled {
+        background:#d9d5dc !important; color:#8c8490 !important; cursor:not-allowed !important;
+        box-shadow:none !important; opacity:1 !important; border:1px solid #d9d5dc !important;
+        filter:saturate(.35);
+      }
+      .download-btn.ready { background:linear-gradient(135deg,#2b2a31,#57515c) !important; color:#fff !important; box-shadow:0 12px 24px rgba(43,42,49,.18) !important; filter:none; }
+      .form-missing-hint { margin-top:10px; padding:11px 13px; border-radius:18px; background:#f4f1f5; color:#817987; font-size:12px; font-weight:850; line-height:1.35; }
       .client-summary { background:#fff; border:1px solid #ffe0e5; border-radius:26px; padding:16px; display:grid; gap:4px; }
       .client-summary b { color:#28262d; font-size:18px; }
       .quick-routine { display:grid; gap:18px; }
@@ -705,6 +735,7 @@ def vista_empleados(request: Request):
               <button id='botonVerRutinaRapida' type='button'>Ver rutina</button>
               <button id='botonDescargarRutinaPdf' type='button' class='download-btn' disabled>Descargar PDF</button>
             </div>
+            <div id='hintPdfSinApp' class='form-missing-hint'>Completa nombre, teléfono, rutina y sube el PDF de la máquina para activar la descarga.</div>
           </div>
 
           <div id='uploadPanel' class='upload-panel disabled'>
@@ -768,8 +799,8 @@ def vista_empleados(request: Request):
     <div id='uploadSplash' class='upload-splash' aria-hidden='true'>
       <div class='upload-box'>
         <div class='upload-loader'></div>
-        <h2>Subiendo y analizando PDF</h2>
-        <p>Estamos guardando el archivo y extrayendo los datos del análisis presencial. No cierres esta pantalla.</p>
+        <h2 id='splashTitulo'>Subiendo y analizando PDF</h2>
+        <p id='splashTexto'>Estamos guardando el archivo y extrayendo los datos del análisis presencial. No cierres esta pantalla.</p>
       </div>
     </div>
 
@@ -785,6 +816,8 @@ def vista_empleados(request: Request):
       const uploadPanel = document.getElementById('uploadPanel');
       const uploadHint = document.getElementById('uploadHint');
       const uploadSplash = document.getElementById('uploadSplash');
+      const splashTitulo = document.getElementById('splashTitulo');
+      const splashTexto = document.getElementById('splashTexto');
       const botonSubirPdf = document.getElementById('botonSubirPdf');
       const modoConApp = document.getElementById('modoConApp');
       const modoSinApp = document.getElementById('modoSinApp');
@@ -794,6 +827,7 @@ def vista_empleados(request: Request):
       const previewRutinaRapida = document.getElementById('previewRutinaRapida');
       const botonVerRutinaRapida = document.getElementById('botonVerRutinaRapida');
       const botonDescargarRutinaPdf = document.getElementById('botonDescargarRutinaPdf');
+      const hintPdfSinApp = document.getElementById('hintPdfSinApp');
       const pdfMaquinaSinApp = document.getElementById('pdfMaquinaSinApp');
       const clienteSinAppNombre = document.getElementById('clienteSinAppNombre');
       const clienteSinAppTelefono = document.getElementById('clienteSinAppTelefono');
@@ -897,11 +931,36 @@ def vista_empleados(request: Request):
       }
 
       function actualizarBotonPdfSinApp() {
-        const completo = formularioSinAppCompleto();
+        const datos = datosClienteSinApp();
+        const faltantes = [];
+        if (!datos.nombre) faltantes.push('nombre');
+        if (!datos.telefono) faltantes.push('teléfono');
+        if (!obtenerRutinaSeleccionada()) faltantes.push('rutina');
+        if (!hayPdfMaquinaValido()) faltantes.push('PDF de la máquina');
+        const completo = faltantes.length === 0;
         botonDescargarRutinaPdf.disabled = !completo;
+        botonDescargarRutinaPdf.classList.toggle('ready', completo);
+        botonDescargarRutinaPdf.classList.toggle('disabled', !completo);
         botonDescargarRutinaPdf.title = completo
           ? 'Descargar PDF combinado'
-          : 'Completa nombre, teléfono, rutina y sube el PDF de la máquina.';
+          : `Falta completar: ${faltantes.join(', ')}.`;
+        if (hintPdfSinApp) {
+          hintPdfSinApp.textContent = completo
+            ? 'Todo listo. Puedes generar el PDF combinado.'
+            : `Para generar el PDF falta: ${faltantes.join(', ')}.`;
+        }
+      }
+
+      function mostrarSplash(titulo, texto) {
+        if (splashTitulo) splashTitulo.textContent = titulo;
+        if (splashTexto) splashTexto.textContent = texto;
+        uploadSplash.classList.add('active');
+        uploadSplash.setAttribute('aria-hidden', 'false');
+      }
+
+      function ocultarSplash() {
+        uploadSplash.classList.remove('active');
+        uploadSplash.setAttribute('aria-hidden', 'true');
       }
 
       function pintarRutinaRapida(rutina) {
@@ -975,6 +1034,7 @@ def vista_empleados(request: Request):
         }
         botonDescargarRutinaPdf.disabled = true;
         botonDescargarRutinaPdf.textContent = 'Generando PDF...';
+        mostrarSplash('Generando PDF combinado', 'Estamos creando la rutina de KBeauty y uniéndola con el PDF de la máquina. No cierres esta pantalla.');
         try {
           const res = await fetchSeguro('/kbeauty-data/rutina-sin-app/pdf', { method:'POST', body:form });
           if (!res.ok) throw new Error('No se pudo generar el PDF.');
@@ -992,14 +1052,18 @@ def vista_empleados(request: Request):
         } catch (err) {
           alert(err.message || 'No se pudo descargar el PDF.');
         } finally {
+          ocultarSplash();
           botonDescargarRutinaPdf.textContent = 'Descargar PDF';
           actualizarBotonPdfSinApp();
         }
       });
 
       function setSubidaActiva(activa) {
-        uploadSplash.classList.toggle('active', activa);
-        uploadSplash.setAttribute('aria-hidden', activa ? 'false' : 'true');
+        if (activa) {
+          mostrarSplash('Subiendo y analizando PDF', 'Estamos guardando el archivo y extrayendo los datos del análisis presencial. No cierres esta pantalla.');
+        } else {
+          ocultarSplash();
+        }
         botonSubirPdf.disabled = activa || !clienteActual;
         archivoPdf.disabled = activa || !clienteActual;
         document.getElementById('notasPdf').disabled = activa || !clienteActual;
