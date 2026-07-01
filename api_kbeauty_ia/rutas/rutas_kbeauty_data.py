@@ -192,7 +192,7 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
             "1 1 1 rg 36 36 540 720 re f",
             "0.961 0.114 0.216 rg 36 682 540 74 re f",
             "1 0.72 0.76 rg 36 682 540 5 re f",
-            "1 1 1 rg BT /F2 27 Tf 58 724 Td (KBeauty IA) Tj ET",
+            "1 1 1 rg BT /F2 27 Tf 58 724 Td (KBeauty Korean) Tj ET",
             "1 1 1 rg BT /F1 10 Tf 58 706 Td (Rutina presencial para cliente sin app) Tj ET",
             f"1 1 1 rg BT /F2 9 Tf 430 724 Td (Fecha) Tj ET",
             f"1 1 1 rg BT /F1 9 Tf 430 708 Td ({_pdf_escape(fecha)}) Tj ET",
