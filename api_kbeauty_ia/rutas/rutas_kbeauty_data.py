@@ -686,7 +686,7 @@ def vista_empleados(request: Request):
               <input id='clienteSinAppTelefono' type='tel' autocomplete='off' placeholder='Ej: 809-000-0000'>
             </div>
             <div class='pdf-maquina-box'>
-              <label>PDF del análisis de la máquina <span class='small'>(opcional)</span></label>
+              <label>PDF del análisis de la máquina <span class='small'>(obligatorio)</span></label>
               <label id='dropZoneMaquina' class='drop-zone'>
                 <input id='pdfMaquinaSinApp' type='file' accept='application/pdf,.pdf'>
                 <div class='drop-icon'></div>
@@ -694,7 +694,7 @@ def vista_empleados(request: Request):
                 <p class='small'>o toca para seleccionarlo. Solo se acepta PDF.</p>
                 <div id='nombreArchivoMaquina' class='status'></div>
               </label>
-              <span class='small'>Si lo subes, el sistema descargará un solo PDF: primero la rutina generada por KBeauty y después el PDF original de la máquina.</span>
+              <span class='small'>Este PDF es obligatorio. El sistema descargará un solo PDF: primero la rutina generada por KBeauty y después el PDF original de la máquina.</span>
             </div>
             <label>Seleccionar rutina</label>
             <select id='selectorRutinaRapida' class='rutina-select'>
@@ -703,7 +703,7 @@ def vista_empleados(request: Request):
             <div id='previewRutinaRapida' class='rutina-preview'>Elige una rutina para ver tipo de piel, condición y productos.</div>
             <div class='upload-row'>
               <button id='botonVerRutinaRapida' type='button'>Ver rutina</button>
-              <button id='botonDescargarRutinaPdf' type='button' class='download-btn'>Descargar PDF</button>
+              <button id='botonDescargarRutinaPdf' type='button' class='download-btn' disabled>Descargar PDF</button>
             </div>
           </div>
 
@@ -794,6 +794,7 @@ def vista_empleados(request: Request):
       const previewRutinaRapida = document.getElementById('previewRutinaRapida');
       const botonVerRutinaRapida = document.getElementById('botonVerRutinaRapida');
       const botonDescargarRutinaPdf = document.getElementById('botonDescargarRutinaPdf');
+      const pdfMaquinaSinApp = document.getElementById('pdfMaquinaSinApp');
       const clienteSinAppNombre = document.getElementById('clienteSinAppNombre');
       const clienteSinAppTelefono = document.getElementById('clienteSinAppTelefono');
       const rutinaRapidaResultado = document.getElementById('rutinaRapidaResultado');
@@ -884,6 +885,25 @@ def vista_empleados(request: Request):
         return datos;
       }
 
+      function hayPdfMaquinaValido() {
+        const file = pdfMaquinaSinApp && pdfMaquinaSinApp.files ? pdfMaquinaSinApp.files[0] : null;
+        if (!file) return false;
+        return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      }
+
+      function formularioSinAppCompleto() {
+        const datos = datosClienteSinApp();
+        return !!datos.nombre && !!datos.telefono && !!obtenerRutinaSeleccionada() && hayPdfMaquinaValido();
+      }
+
+      function actualizarBotonPdfSinApp() {
+        const completo = formularioSinAppCompleto();
+        botonDescargarRutinaPdf.disabled = !completo;
+        botonDescargarRutinaPdf.title = completo
+          ? 'Descargar PDF combinado'
+          : 'Completa nombre, teléfono, rutina y sube el PDF de la máquina.';
+      }
+
       function pintarRutinaRapida(rutina) {
         const dia = productosPorMomento(rutina, 'dia');
         const noche = productosPorMomento(rutina, 'noche');
@@ -923,7 +943,12 @@ def vista_empleados(request: Request):
         previewRutinaRapida.textContent = rutina
           ? `${rutina.nombre || 'Rutina'} · Tipo de piel: ${rutina.tipo_piel || 'N/D'} · Condición: ${rutina.condicion || 'N/D'}`
           : 'Elige una rutina para ver tipo de piel, condición y productos.';
+        actualizarBotonPdfSinApp();
       });
+      clienteSinAppNombre.addEventListener('input', actualizarBotonPdfSinApp);
+      clienteSinAppTelefono.addEventListener('input', actualizarBotonPdfSinApp);
+      actualizarBotonPdfSinApp();
+
       botonVerRutinaRapida.addEventListener('click', () => {
         const rutina = obtenerRutinaSeleccionada();
         if (!rutina) { alert('Selecciona una rutina primero.'); return; }
@@ -935,6 +960,12 @@ def vista_empleados(request: Request):
         const rutina = obtenerRutinaSeleccionada();
         const datos = validarClienteSinApp();
         if (!rutina || !datos) { if (!rutina) alert('Selecciona una rutina primero.'); return; }
+        if (!hayPdfMaquinaValido()) {
+          alert('Sube el PDF del análisis de la máquina para poder generar el PDF combinado.');
+          if (pdfMaquinaSinApp) pdfMaquinaSinApp.focus();
+          actualizarBotonPdfSinApp();
+          return;
+        }
         const form = new FormData();
         form.append('rutina_indice', selectorRutinaRapida.value);
         form.append('cliente_nombre', datos.nombre);
@@ -961,8 +992,8 @@ def vista_empleados(request: Request):
         } catch (err) {
           alert(err.message || 'No se pudo descargar el PDF.');
         } finally {
-          botonDescargarRutinaPdf.disabled = false;
           botonDescargarRutinaPdf.textContent = 'Descargar PDF';
+          actualizarBotonPdfSinApp();
         }
       });
 
@@ -1099,16 +1130,19 @@ def vista_empleados(request: Request):
         if (!file) {
           if (nombreArchivoMaquina) nombreArchivoMaquina.textContent = '';
           if (dropZoneMaquina) dropZoneMaquina.classList.remove('has-file');
+          actualizarBotonPdfSinApp();
           return true;
         }
         if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
           pdfMaquinaSinApp.value = '';
           if (nombreArchivoMaquina) nombreArchivoMaquina.textContent = 'Solo se acepta PDF.';
           if (dropZoneMaquina) dropZoneMaquina.classList.remove('has-file');
+          actualizarBotonPdfSinApp();
           return false;
         }
         if (nombreArchivoMaquina) nombreArchivoMaquina.textContent = `Seleccionado: ${file.name}`;
         if (dropZoneMaquina) dropZoneMaquina.classList.add('has-file');
+        actualizarBotonPdfSinApp();
         return true;
       }
       function validarArchivo() {
