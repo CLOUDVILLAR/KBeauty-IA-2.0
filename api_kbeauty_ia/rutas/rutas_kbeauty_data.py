@@ -120,6 +120,8 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
             "1 0.72 0.76 rg 36 682 540 5 re f",
             "1 1 1 rg BT /F2 27 Tf 58 724 Td (KBeauty IA) Tj ET",
             "1 1 1 rg BT /F1 10 Tf 58 706 Td (Rutina presencial para cliente sin app) Tj ET",
+            f"1 1 1 rg BT /F2 9 Tf 430 724 Td (Fecha) Tj ET",
+            f"1 1 1 rg BT /F1 9 Tf 430 708 Td ({_pdf_escape(fecha)}) Tj ET",
             "0.18 0.15 0.18 rg",
         ]
         y = 654
@@ -167,7 +169,8 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
     rect(312, 586, 248, 82, "1 0.985 0.988")
     etiqueta_valor(68, 642, "CLIENTE", cliente_nombre, ancho=28)
     etiqueta_valor(328, 642, "TELEFONO", cliente_telefono, ancho=27)
-    texto(328, 598, f"Fecha: {fecha}", 9, True, "0.52 0.47 0.53")
+    texto(328, 602, "FECHA", 8, True, "0.52 0.47 0.53")
+    texto(328, 588, fecha, 9, True, "0.18 0.15 0.18")
 
     y = 548
     rect(52, y - 22, 508, 78, "1 1 1")
