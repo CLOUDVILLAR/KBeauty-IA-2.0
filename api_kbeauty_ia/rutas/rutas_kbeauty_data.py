@@ -141,7 +141,7 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
         if y - altura < 60:
             nueva_pagina()
 
-    def parrafo(valor, x=58, size=9, ancho=88, line_height=13, color="0.34 0.31 0.35"):
+    def parrafo(valor, x=58, size=9, ancho=88, line_height=14, color="0.34 0.31 0.35"):
         nonlocal y
         for linea_txt in _wrap_pdf(valor, ancho):
             asegurar(line_height + 8)
@@ -165,14 +165,14 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
     nueva_pagina()
 
     # Datos del cliente en tarjetas separadas para evitar cruces visuales.
-    rect(52, 586, 248, 82, "1 0.985 0.988")
-    rect(312, 586, 248, 82, "1 0.985 0.988")
+    rect(52, 568, 248, 100, "1 0.985 0.988")
+    rect(312, 568, 248, 100, "1 0.985 0.988")
     etiqueta_valor(68, 642, "CLIENTE", cliente_nombre, ancho=28)
-    etiqueta_valor(328, 642, "TELEFONO", cliente_telefono, ancho=27)
-    texto(328, 602, "FECHA", 8, True, "0.52 0.47 0.53")
-    texto(328, 588, fecha, 9, True, "0.18 0.15 0.18")
+    etiqueta_valor(328, 646, "TELEFONO", cliente_telefono, ancho=27)
+    texto(328, 592, "FECHA", 8, True, "0.52 0.47 0.53")
+    texto(328, 577, fecha, 9, True, "0.18 0.15 0.18")
 
-    y = 548
+    y = 528
     rect(52, y - 22, 508, 78, "1 1 1")
     rect(52, y - 22, 508, 3, "1 0.87 0.90")
     texto(68, y + 24, "Rutina seleccionada", 9, True, "0.52 0.47 0.53")
@@ -194,10 +194,10 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
         rect(58, y - 8, 494, 2, "1 0.92 0.94")
         texto(58, y, f"{idx}. {nombre}", 11, True, "0.18 0.15 0.18")
         y -= 15
-        parrafo(subtitulo, x=72, size=8, ancho=76, line_height=11, color="0.52 0.47 0.53")
+        parrafo(subtitulo, x=72, size=8, ancho=76, line_height=12, color="0.52 0.47 0.53")
         if desc:
-            parrafo(desc, x=72, size=8, ancho=78, line_height=11)
-        y -= 8
+            parrafo(desc, x=72, size=8, ancho=78, line_height=12)
+        y -= 12
 
     bloque_titulo("Rutina de Noche")
     productos_noche = _productos_momento_pdf(rutina, "noche")
@@ -209,16 +209,16 @@ def _crear_pdf_rutina_no_app(cliente_nombre, cliente_telefono, rutina):
         rect(58, y - 8, 494, 2, "1 0.92 0.94")
         texto(58, y, f"{idx}. {nombre}", 11, True, "0.18 0.15 0.18")
         y -= 15
-        parrafo(subtitulo, x=72, size=8, ancho=76, line_height=11, color="0.52 0.47 0.53")
+        parrafo(subtitulo, x=72, size=8, ancho=76, line_height=12, color="0.52 0.47 0.53")
         if desc:
-            parrafo(desc, x=72, size=8, ancho=78, line_height=11)
-        y -= 8
+            parrafo(desc, x=72, size=8, ancho=78, line_height=12)
+        y -= 12
 
     asegurar(70)
     rect(52, y - 36, 508, 58, "1 0.965 0.972")
     texto(68, y, "Nota para entrega", 10, True, "0.961 0.114 0.216")
     y -= 14
-    parrafo("Esta rutina fue seleccionada manualmente por el empleado desde el catalogo KBeauty. El reporte original de la maquina se adjunta despues de esta portada cuando fue cargado.", x=68, size=8, ancho=82, line_height=11)
+    parrafo("Esta rutina fue seleccionada manualmente por el empleado desde el catalogo KBeauty. El reporte original de la maquina se adjunta despues de esta portada cuando fue cargado.", x=68, size=8, ancho=82, line_height=12)
 
     if comandos:
         paginas.append("\n".join(comandos))
