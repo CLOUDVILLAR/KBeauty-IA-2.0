@@ -595,12 +595,26 @@ def vista_empleados(request: Request):
       .tag { display:inline-flex; align-items:center; border-radius:999px; padding:7px 11px; font-size:12px; font-weight:950; background:#ffecef; color:#f51d37; white-space:nowrap; }
       .tag.presencial { background:#ddfaf4; color:#12a999; }
       .drop-zone {
-        border:2px dashed #ffc6d0; border-radius:28px; padding:30px; text-align:center;
-        background:linear-gradient(180deg,#fff,#fff1f4); transition:.15s; cursor:pointer;
+        width:100%; min-height:154px; box-sizing:border-box; display:flex; flex-direction:column;
+        align-items:center; justify-content:center; gap:6px; border:2px dashed #ffd1dc;
+        border-radius:30px; padding:28px 22px; text-align:center; background:#fffafb;
+        transition:.18s ease; cursor:pointer; color:#847d87; margin-top:8px;
       }
-      .drop-zone.drag { border-color:#f51d37; background:#ffe5ea; transform:scale(1.01); }
+      .drop-zone:hover { border-color:#ff9db0; background:#fff5f7; box-shadow:0 18px 42px rgba(245,29,55,.08); transform:translateY(-1px); }
+      .drop-zone.drag { border-color:#f51d37; background:#fff0f3; transform:scale(1.01); box-shadow:0 20px 46px rgba(245,29,55,.12); }
       .drop-zone input { display:none; }
-      .drop-icon { font-size:44px; margin-bottom:8px; }
+      .drop-zone b { color:#7a747d; font-size:20px; letter-spacing:-.25px; }
+      .drop-zone .small { margin:0; color:#9ca3b6; font-size:14px; font-weight:800; }
+      .drop-icon { width:54px; height:54px; margin-bottom:2px; position:relative; display:block; }
+      .drop-icon::before {
+        content:''; position:absolute; left:12px; top:5px; width:30px; height:38px; border:4px solid #77737a;
+        border-radius:2px; background:#fff; box-sizing:border-box;
+      }
+      .drop-icon::after {
+        content:''; position:absolute; left:20px; top:17px; width:16px; height:3px; background:#c4c4c7;
+        box-shadow:0 7px 0 #d7d7da, 0 14px 0 #e1e1e4;
+      }
+      .drop-zone.has-file { border-color:#f51d37; background:#fff4f6; }
       .upload-row { display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:wrap; margin-top:16px; }
       button,.secondary-btn {
         border-radius:999px !important;
@@ -673,7 +687,13 @@ def vista_empleados(request: Request):
             </div>
             <div class='pdf-maquina-box'>
               <label>PDF del análisis de la máquina <span class='small'>(opcional)</span></label>
-              <input id='pdfMaquinaSinApp' type='file' accept='application/pdf,.pdf'>
+              <label id='dropZoneMaquina' class='drop-zone'>
+                <input id='pdfMaquinaSinApp' type='file' accept='application/pdf,.pdf'>
+                <div class='drop-icon'></div>
+                <b>Arrastra el PDF aquí</b>
+                <p class='small'>o toca para seleccionarlo. Solo se acepta PDF.</p>
+                <div id='nombreArchivoMaquina' class='status'></div>
+              </label>
               <span class='small'>Si lo subes, el sistema descargará un solo PDF: primero la rutina generada por KBeauty y después el PDF original de la máquina.</span>
             </div>
             <label>Seleccionar rutina</label>
@@ -697,7 +717,7 @@ def vista_empleados(request: Request):
               <textarea id='notasPdf' name='notas' placeholder='Ej: análisis realizado en cabina, sucursal, observaciones...'></textarea>
               <label id='dropZone' class='drop-zone'>
                 <input id='archivoPdf' name='archivo' type='file' accept='application/pdf'>
-                <div class='drop-icon'>📄</div>
+                <div class='drop-icon'></div>
                 <b>Arrastra el PDF aquí</b>
                 <p class='small'>o toca para seleccionarlo. Solo se acepta PDF.</p>
                 <div id='nombreArchivo' class='status'></div>
@@ -1061,15 +1081,47 @@ def vista_empleados(request: Request):
         const file = e.dataTransfer.files[0];
         if (file) { archivoPdf.files = e.dataTransfer.files; validarArchivo(); }
       });
+
+      const dropZoneMaquina = document.getElementById('dropZoneMaquina');
+      const nombreArchivoMaquina = document.getElementById('nombreArchivoMaquina');
+      if (pdfMaquinaSinApp && dropZoneMaquina) {
+        pdfMaquinaSinApp.addEventListener('change', () => validarArchivoMaquina());
+        ['dragenter','dragover'].forEach(ev => dropZoneMaquina.addEventListener(ev, e => { e.preventDefault(); dropZoneMaquina.classList.add('drag'); }));
+        ['dragleave','drop'].forEach(ev => dropZoneMaquina.addEventListener(ev, e => { e.preventDefault(); dropZoneMaquina.classList.remove('drag'); }));
+        dropZoneMaquina.addEventListener('drop', e => {
+          const file = e.dataTransfer.files[0];
+          if (file) { pdfMaquinaSinApp.files = e.dataTransfer.files; validarArchivoMaquina(); }
+        });
+      }
+
+      function validarArchivoMaquina() {
+        const file = pdfMaquinaSinApp && pdfMaquinaSinApp.files ? pdfMaquinaSinApp.files[0] : null;
+        if (!file) {
+          if (nombreArchivoMaquina) nombreArchivoMaquina.textContent = '';
+          if (dropZoneMaquina) dropZoneMaquina.classList.remove('has-file');
+          return true;
+        }
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+          pdfMaquinaSinApp.value = '';
+          if (nombreArchivoMaquina) nombreArchivoMaquina.textContent = 'Solo se acepta PDF.';
+          if (dropZoneMaquina) dropZoneMaquina.classList.remove('has-file');
+          return false;
+        }
+        if (nombreArchivoMaquina) nombreArchivoMaquina.textContent = `Seleccionado: ${file.name}`;
+        if (dropZoneMaquina) dropZoneMaquina.classList.add('has-file');
+        return true;
+      }
       function validarArchivo() {
         const file = archivoPdf.files[0];
-        if (!file) { nombreArchivo.textContent = ''; return false; }
+        if (!file) { nombreArchivo.textContent = ''; dropZone.classList.remove('has-file'); return false; }
         if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
           archivoPdf.value = '';
           nombreArchivo.textContent = 'Solo se acepta PDF.';
+          dropZone.classList.remove('has-file');
           return false;
         }
         nombreArchivo.textContent = `Seleccionado: ${file.name}`;
+        dropZone.classList.add('has-file');
         return true;
       }
 
@@ -1077,6 +1129,7 @@ def vista_empleados(request: Request):
         archivoPdf.value = '';
         document.getElementById('notasPdf').value = '';
         nombreArchivo.textContent = '';
+        dropZone.classList.remove('has-file');
         estadoUpload.textContent = '';
       });
 
