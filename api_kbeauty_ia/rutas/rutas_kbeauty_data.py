@@ -4,6 +4,7 @@ import re
 from datetime import datetime
 from html import escape
 from urllib.parse import quote
+from typing import List
 
 from fastapi import APIRouter, Request, Form, File, UploadFile, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
@@ -837,6 +838,35 @@ def accion_asignar_rol(request: Request, villar_id: str = Form(...), codigo_rol:
     exigir_admin(usuario)
     asignar_rol_a_villar_id(villar_id, codigo_rol)
     return RedirectResponse("/kbeauty-data/admin", status_code=303)
+
+
+@router.post("/kbeauty-data/admin/usuarios/roles/actualizar")
+def accion_actualizar_roles_usuario(
+    request: Request,
+    villar_id: str = Form(...),
+    roles_seleccionados: List[str] = Form(default=[]),
+    return_to: str = Form("/kbeauty-data/admin"),
+):
+    usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/admin")
+    if redireccion:
+        return redireccion
+    exigir_admin(usuario)
+
+    villar_id = str(villar_id or "").strip()
+    roles_disponibles = {str(r.get("codigo") or "").strip() for r in listar_roles() if r.get("codigo")}
+    roles_marcados = {str(codigo or "").strip() for codigo in roles_seleccionados if str(codigo or "").strip()}
+    roles_marcados = roles_marcados.intersection(roles_disponibles)
+
+    for codigo_rol in sorted(roles_disponibles):
+        if codigo_rol in roles_marcados:
+            asignar_rol_a_villar_id(villar_id, codigo_rol)
+        else:
+            quitar_rol_a_villar_id(villar_id, codigo_rol)
+
+    destino = str(return_to or "/kbeauty-data/admin").strip()
+    if not destino.startswith("/kbeauty-data/admin"):
+        destino = "/kbeauty-data/admin"
+    return RedirectResponse(destino, status_code=303)
 
 
 @router.get("/kbeauty-data/empleados", response_class=HTMLResponse)
