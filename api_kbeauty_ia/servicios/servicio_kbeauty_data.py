@@ -686,7 +686,7 @@ def guardar_registro_rutina_sin_app_presencial(empleado_usuario, pdf_bytes, arch
 
 
 
-def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", limite=50, token=None, datos_sesion=None):
+def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_desde="", fecha_hasta="", limite=50, token=None, datos_sesion=None):
     """Construye metricas del dashboard admin separando origenes de analisis.
 
     - Presenciales con/sin app salen de analisis_presenciales_pdf.
@@ -697,6 +697,20 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", limite=
     if filtro not in {"todos", "presencial_con_app", "presencial_sin_app", "app_cliente"}:
         filtro = "todos"
     empleado_filtro = str(empleado_filtro or "").strip()
+    fecha_desde = str(fecha_desde or "").strip()
+    fecha_hasta = str(fecha_hasta or "").strip()
+
+    def _condiciones_fecha(alias=""):
+        prefijo = f"{alias}." if alias else ""
+        condiciones = []
+        params = []
+        if fecha_desde:
+            condiciones.append(f"{prefijo}creado_en >= %s::date")
+            params.append(fecha_desde)
+        if fecha_hasta:
+            condiciones.append(f"{prefijo}creado_en < (%s::date + interval '1 day')")
+            params.append(fecha_hasta)
+        return condiciones, params
 
     resumen = {
         "total": 0,
@@ -712,18 +726,16 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", limite=
     existe_presenciales = _tabla_existe_local("analisis_presenciales_pdf")
     existe_app = _tabla_existe_local("analisis_piel")
 
-    where_empleado = ""
-    params_empleado = []
+    condiciones_base, params_base = _condiciones_fecha()
     if empleado_filtro:
-        where_empleado = """
-        WHERE COALESCE(
+        condiciones_base.append("""COALESCE(
             CAST(empleado_villar_id AS TEXT),
             CAST(empleado_id AS TEXT),
             CAST(usuario_id AS TEXT),
             ''
-        ) = %s
-        """
-        params_empleado.append(empleado_filtro)
+        ) = %s""")
+        params_base.append(empleado_filtro)
+    where_base = "WHERE " + " AND ".join(condiciones_base) if condiciones_base else ""
 
     if existe_presenciales:
         filas_presenciales = consultar_todos(
@@ -735,18 +747,20 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", limite=
                 END AS tipo_dashboard,
                 COUNT(*)::int AS total
             FROM analisis_presenciales_pdf
-            {where_empleado}
+            {where_base}
             GROUP BY 1
             """,
-            tuple(params_empleado),
+            tuple(params_base),
         )
         for fila in filas_presenciales or []:
             clave = fila.get("tipo_dashboard")
             if clave in resumen:
                 resumen[clave] = int(fila.get("total") or 0)
 
+        condiciones_emp, params_emp = _condiciones_fecha()
+        where_emp = "WHERE " + " AND ".join(condiciones_emp) if condiciones_emp else ""
         por_empleado = consultar_todos(
-            """
+            f"""
             SELECT
                 COALESCE(CAST(empleado_villar_id AS TEXT), CAST(empleado_id AS TEXT), CAST(usuario_id AS TEXT), 'Sin empleado') AS empleado_ref,
                 COUNT(*)::int AS total,
@@ -754,10 +768,12 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", limite=
                 SUM(CASE WHEN tipo = 'presencial_sin_app' THEN 0 ELSE 1 END)::int AS presencial_con_app,
                 MAX(creado_en) AS ultimo_analisis
             FROM analisis_presenciales_pdf
+            {where_emp}
             GROUP BY 1
             ORDER BY total DESC, ultimo_analisis DESC NULLS LAST
             LIMIT 200
-            """
+            """,
+            tuple(params_emp),
         ) or []
 
         empleados_opciones = list(por_empleado)
@@ -767,7 +783,9 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", limite=
     # Los analisis de app no tienen empleado. Si el admin filtra por empleado,
     # mostramos solo los presenciales de ese empleado.
     if existe_app and not empleado_filtro:
-        total_app = consultar_uno("SELECT COUNT(*)::int AS total FROM analisis_piel")
+        condiciones_app, params_app = _condiciones_fecha()
+        where_app = "WHERE " + " AND ".join(condiciones_app) if condiciones_app else ""
+        total_app = consultar_uno(f"SELECT COUNT(*)::int AS total FROM analisis_piel {where_app}", tuple(params_app))
         resumen["app_cliente"] = int((total_app or {}).get("total") or 0)
 
     resumen["total"] = resumen["presencial_con_app"] + resumen["presencial_sin_app"] + resumen["app_cliente"]
@@ -779,7 +797,8 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", limite=
     params = []
 
     if incluir_presenciales and existe_presenciales:
-        condiciones = []
+        condiciones, params_fecha_pres = _condiciones_fecha()
+        params.extend(params_fecha_pres)
         if filtro == "presencial_sin_app":
             condiciones.append("tipo = 'presencial_sin_app'")
         elif filtro == "presencial_con_app":
@@ -807,7 +826,10 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", limite=
         """)
 
     if incluir_app and existe_app:
-        consultas.append("""
+        condiciones_app_rec, params_app_rec = _condiciones_fecha()
+        params.extend(params_app_rec)
+        where_app_rec = "WHERE " + " AND ".join(condiciones_app_rec) if condiciones_app_rec else ""
+        consultas.append(f"""
             SELECT
                 id::text AS id,
                 'app_cliente' AS tipo,
@@ -822,6 +844,7 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", limite=
                 NULL::text AS archivo_nombre,
                 resultado_completo AS valores_extraidos
             FROM analisis_piel
+            {where_app_rec}
         """)
 
     if consultas:
@@ -875,6 +898,8 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", limite=
     return {
         "filtro": filtro,
         "empleado_filtro": empleado_filtro,
+        "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
         "resumen": resumen,
         "por_empleado": por_empleado or [],
         "empleados_opciones": empleados_opciones or [],

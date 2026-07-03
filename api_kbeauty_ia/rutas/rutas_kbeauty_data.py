@@ -639,7 +639,13 @@ def vista_admin(request: Request, q: str = ""):
 
 
 @router.get("/kbeauty-data/admin/dashboard", response_class=HTMLResponse)
-def vista_dashboard_admin(request: Request, filtro: str = Query("todos"), empleado: str = Query("")):
+def vista_dashboard_admin(
+    request: Request,
+    filtro: str = Query("todos"),
+    empleado: str = Query(""),
+    fecha_desde: str = Query(""),
+    fecha_hasta: str = Query(""),
+):
     usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/admin/dashboard")
     if redireccion:
         return redireccion
@@ -649,20 +655,26 @@ def vista_dashboard_admin(request: Request, filtro: str = Query("todos"), emplea
     dashboard = obtener_dashboard_analisis_admin(
         filtro=filtro,
         empleado_filtro=empleado,
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
         token=usuario.get("token_villar_do"),
         datos_sesion=usuario.get("datos_villar"),
     )
     resumen = dashboard.get("resumen") or {}
     filtro_actual = dashboard.get("filtro") or "todos"
     empleado_actual = dashboard.get("empleado_filtro") or ""
+    fecha_desde_actual = dashboard.get("fecha_desde") or ""
+    fecha_hasta_actual = dashboard.get("fecha_hasta") or ""
 
     def activo(valor):
         return "active" if filtro_actual == valor else ""
 
-    def qs(valor_filtro=None, valor_empleado=None):
-        f = escape(valor_filtro if valor_filtro is not None else filtro_actual)
-        e = escape(valor_empleado if valor_empleado is not None else empleado_actual)
-        return f"/kbeauty-data/admin/dashboard?filtro={f}&empleado={e}"
+    def qs(valor_filtro=None, valor_empleado=None, valor_fecha_desde=None, valor_fecha_hasta=None):
+        f = quote(str(valor_filtro if valor_filtro is not None else filtro_actual))
+        e = quote(str(valor_empleado if valor_empleado is not None else empleado_actual))
+        fd = quote(str(valor_fecha_desde if valor_fecha_desde is not None else fecha_desde_actual))
+        fh = quote(str(valor_fecha_hasta if valor_fecha_hasta is not None else fecha_hasta_actual))
+        return f"/kbeauty-data/admin/dashboard?filtro={f}&empleado={e}&fecha_desde={fd}&fecha_hasta={fh}"
 
     filtros = [
         ("todos", "Todos"),
@@ -751,7 +763,9 @@ def vista_dashboard_admin(request: Request, filtro: str = Query("todos"), emplea
       .dash-filters {{ display:flex; flex-wrap:wrap; gap:10px; }}
       .dash-filter {{ padding:10px 14px; border-radius:999px; text-decoration:none; background:#fff; color:#382f36; font-weight:900; border:1px solid #f0d7dc; }}
       .dash-filter.active {{ color:#fff; background:linear-gradient(135deg,#f51d37,#ff6475); box-shadow:0 10px 20px rgba(245,29,55,.22); }}
-      .filter-grid {{ display:grid; grid-template-columns:1fr auto; gap:12px; align-items:end; margin-top:16px; }}
+      .filter-grid {{ display:grid; grid-template-columns:1.2fr .8fr .8fr; gap:12px; align-items:end; margin-top:16px; }}
+      .filter-actions {{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }}
+      .clear-filter {{ display:inline-flex; align-items:center; justify-content:center; padding:10px 14px; border-radius:999px; text-decoration:none; font-weight:900; background:#fff; color:#f51d37; border:1px solid #ffd6dc; }}
       .chart-layout {{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }}
       .chart-row,.employee-bar {{ display:grid; grid-template-columns:170px 1fr 48px; gap:12px; align-items:center; margin:13px 0; }}
       .chart-label,.employee-name {{ color:#38313a; font-weight:900; }}
@@ -788,14 +802,24 @@ def vista_dashboard_admin(request: Request, filtro: str = Query("todos"), emplea
     <div class='dash-panel'>
       <h2>Filtros</h2>
       <div class='dash-filters'>{filtros_html}</div>
-      <form class='filter-grid' method='get' action='/kbeauty-data/admin/dashboard'>
+      <form id='dashboardFilters' class='filter-grid' method='get' action='/kbeauty-data/admin/dashboard'>
         <input type='hidden' name='filtro' value='{escape(filtro_actual)}'>
         <div>
           <label>Mostrar análisis de un solo empleado</label>
-          <select name='empleado'>{opciones_empleado}</select>
+          <select name='empleado' onchange='this.form.submit()'>{opciones_empleado}</select>
         </div>
-        <button>Aplicar filtro</button>
+        <div>
+          <label>Desde</label>
+          <input type='date' name='fecha_desde' value='{escape(fecha_desde_actual)}' onchange='this.form.submit()'>
+        </div>
+        <div>
+          <label>Hasta</label>
+          <input type='date' name='fecha_hasta' value='{escape(fecha_hasta_actual)}' onchange='this.form.submit()'>
+        </div>
       </form>
+      <div class='filter-actions'>
+        <a class='clear-filter' href='/kbeauty-data/admin/dashboard'>Limpiar filtros</a>
+      </div>
     </div>
 
     <div class='chart-layout'>
@@ -817,6 +841,14 @@ def vista_dashboard_admin(request: Request, filtro: str = Query("todos"), emplea
         <tbody>{filas_recientes}</tbody>
       </table>
     </div>
+    <script>
+      document.querySelectorAll('.dash-filter').forEach(function(link) {{
+        link.addEventListener('click', function(event) {{
+          event.preventDefault();
+          window.location.href = this.getAttribute('href');
+        }});
+      }});
+    </script>
     """
     return HTMLResponse(_html_base("Dashboard KBEAUTY-DATA", contenido, usuario))
 
