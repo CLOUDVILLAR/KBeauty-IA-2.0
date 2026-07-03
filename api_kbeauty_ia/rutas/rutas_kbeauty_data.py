@@ -33,6 +33,7 @@ from servicios.servicio_kbeauty_data import (
 )
 from config.configuracion import VILLAR_DO_API_URL, VILLAR_DO_CLIENT_ID
 from servicios.servicio_rutinas import listar_rutinas
+from servicios.servicio_usuarios import obtener_roles_usuario
 from utilidades.respuestas import respuesta_correcta, respuesta_error
 
 router = APIRouter(tags=["KBEAUTY-DATA"])
@@ -551,7 +552,7 @@ def vista_admin(request: Request, q: str = ""):
       .admin-actions {{ display:flex; gap:12px; flex-wrap:wrap; margin-top:18px; }}
       .primary-link {{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:13px 18px; border-radius:16px; text-decoration:none; font-weight:900; color:#fff; background:linear-gradient(135deg,#f51d37,#ff6475); box-shadow:0 14px 28px rgba(245,29,55,.22); }}
       .secondary-link {{ display:inline-flex; align-items:center; justify-content:center; padding:13px 18px; border-radius:16px; text-decoration:none; font-weight:900; color:#332a31; background:#fff; border:1px solid #f0d7dc; }}
-      .role-tools {{ display:grid; grid-template-columns:minmax(260px, 520px) 1fr; gap:20px; align-items:start; }}
+      .role-tools {{ display:grid; grid-template-columns:minmax(260px, 560px); gap:20px; align-items:start; }}
       .soft-card {{ background:linear-gradient(135deg,#fff,#fff8fa); border:1px solid #f0d7dc; border-radius:22px; padding:20px; box-shadow:0 14px 32px rgba(20,36,66,.06); }}
       .users-head {{ display:flex; justify-content:space-between; gap:14px; align-items:flex-start; margin-bottom:18px; }}
       .search-inline {{ display:grid; grid-template-columns:minmax(220px,1fr) auto; gap:10px; align-items:end; margin-top:12px; }}
@@ -596,10 +597,6 @@ def vista_admin(request: Request, q: str = ""):
           <label>Descripcion</label><textarea name='descripcion'>Permite subir analisis presenciales PDF de clientes</textarea>
           <button>Crear rol</button>
         </form>
-      </div>
-      <div class='soft-card'>
-        <h2>Edición por usuario</h2>
-        <p class='small'>Ya no hay formulario separado para asignar roles. Cada usuario tiene su propio botón de edición para evitar copiar y pegar Villar ID manualmente.</p>
       </div>
     </div>
 
