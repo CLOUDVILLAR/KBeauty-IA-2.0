@@ -522,7 +522,7 @@ def _procesar_pdf_presencial(registro_id, archivo: UploadFile):
         rutina_recomendada = _preparar_rutina_desde_ia(analisis_ia)
 
         valores_extraidos = {
-            "origen": "presencial_pdf",
+            "origen": "presencial_con_app",
             "texto_extraido": texto_pdf[:50000],
             "analisis_ia": analisis_ia or {},
             "rutina_recomendada": rutina_recomendada or {},
@@ -578,6 +578,9 @@ def guardar_pdf_presencial(villar_id, empleado_villar_id, archivo: UploadFile, p
 
     columnas = _columnas_tabla("analisis_presenciales_pdf")
     datos = {
+        "titulo": "Análisis facial presencial con app",
+        "tipo": "presencial_con_app",
+        "etiqueta": "Presencial con app",
         "archivo_nombre": nombre,
         "archivo_ruta": str(ruta).replace("\\", "/"),
         "archivo_url": None,
@@ -606,6 +609,194 @@ def guardar_pdf_presencial(villar_id, empleado_villar_id, archivo: UploadFile, p
     # valores_extraidos y cambia estado_procesamiento para el flujo presencial.
     return _procesar_pdf_presencial(registro["id"], archivo) or registro
 
+
+
+def _obtener_usuario_empleado_local(empleado_usuario):
+    """Devuelve el usuario local del empleado autenticado en Villar ID."""
+    empleado_usuario = empleado_usuario or {}
+    empleado_id = empleado_usuario.get("id")
+    empleado_villar_id = empleado_usuario.get("villar_id")
+    if empleado_id:
+        usuario = consultar_uno("SELECT * FROM usuarios WHERE id = %s", (empleado_id,))
+        if usuario:
+            return usuario
+    if empleado_villar_id:
+        usuario = consultar_uno("SELECT * FROM usuarios WHERE villar_id = %s", (empleado_villar_id,))
+        if usuario:
+            return usuario
+    respuesta_error("No se pudo identificar el empleado en la base local", 401)
+
+
+def guardar_registro_rutina_sin_app_presencial(empleado_usuario, pdf_bytes, archivo_nombre, cliente_nombre, cliente_telefono, rutina, rutina_indice=None):
+    """Guarda el PDF generado para un cliente sin app como analisis presencial.
+
+    No requiere cambios en DB: usuario_id y empleado_id usan el usuario local del
+    empleado que inicio sesion con Villar ID. El cliente sin app queda en metadata.
+    """
+    if not _tabla_existe_local("analisis_presenciales_pdf"):
+        respuesta_error("La tabla analisis_presenciales_pdf no existe", 500)
+    if not pdf_bytes:
+        respuesta_error("PDF generado vacio", 500)
+
+    empleado_local = _obtener_usuario_empleado_local(empleado_usuario)
+    empleado_villar_id = str(empleado_local.get("villar_id") or empleado_usuario.get("villar_id") or "")
+
+    nombre_archivo = archivo_nombre or f"rutina_kbeauty_{uuid.uuid4()}.pdf"
+    if not nombre_archivo.lower().endswith(".pdf"):
+        nombre_archivo = f"{nombre_archivo}.pdf"
+    nombre_seguro = f"sin_app_{uuid.uuid4()}.pdf"
+    ruta = _directorio_pdfs() / nombre_seguro
+    ruta.write_bytes(pdf_bytes)
+
+    metadata = {
+        "origen": "presencial_sin_app",
+        "flujo": "rutina_sin_app_pdf",
+        "cliente_sin_app": True,
+        "cliente_nombre": cliente_nombre,
+        "cliente_telefono": cliente_telefono,
+        "rutina_indice": rutina_indice,
+        "rutina_nombre": (rutina or {}).get("nombre") or (rutina or {}).get("nombre_rutina"),
+        "tipo_piel": (rutina or {}).get("tipo_piel"),
+        "condicion": (rutina or {}).get("condicion"),
+        "empleado_villar_id": empleado_villar_id,
+        "empleado_usuario_id": str(empleado_local.get("id") or ""),
+    }
+
+    columnas = _columnas_tabla("analisis_presenciales_pdf")
+    datos = {
+        "usuario_id": empleado_local["id"],
+        "empleado_id": empleado_local["id"],
+        "empleado_villar_id": empleado_villar_id,
+        "titulo": "Análisis facial presencial sin app",
+        "tipo": "presencial_sin_app",
+        "etiqueta": "Presencial sin app",
+        "archivo_nombre": nombre_archivo,
+        "archivo_ruta": str(ruta).replace("\\", "/"),
+        "archivo_url": None,
+        "valores_extraidos": Json(_json_seguro_externo(metadata)),
+        "estado_procesamiento": "completado",
+        "notas": "Generado desde la vista empleado para cliente sin app",
+    }
+    # villar_id queda sin valor porque el cliente no tiene cuenta/app.
+    campos = [k for k in datos if k in columnas]
+    valores = [datos[k] for k in campos]
+    placeholders = ", ".join(["%s"] * len(campos))
+    sql = f"INSERT INTO analisis_presenciales_pdf ({', '.join(campos)}) VALUES ({placeholders}) RETURNING *"
+    return ejecutar(sql, tuple(valores), retornar=True)
+
+
+def obtener_dashboard_analisis_admin(filtro="todos", limite=30):
+    """Construye metricas del dashboard admin separando origenes de analisis."""
+    filtro = (filtro or "todos").strip()
+    if filtro not in {"todos", "presencial_con_app", "presencial_sin_app", "app_cliente"}:
+        filtro = "todos"
+
+    resumen = {
+        "total": 0,
+        "presencial_con_app": 0,
+        "presencial_sin_app": 0,
+        "app_cliente": 0,
+        "empleados_con_analisis": 0,
+    }
+    por_empleado = []
+    recientes = []
+
+    if _tabla_existe_local("analisis_presenciales_pdf"):
+        filas_presenciales = consultar_todos(
+            """
+            SELECT
+                CASE
+                    WHEN tipo = 'presencial_sin_app' THEN 'presencial_sin_app'
+                    ELSE 'presencial_con_app'
+                END AS tipo_dashboard,
+                COUNT(*)::int AS total
+            FROM analisis_presenciales_pdf
+            GROUP BY 1
+            """
+        )
+        for fila in filas_presenciales or []:
+            clave = fila.get("tipo_dashboard")
+            if clave in resumen:
+                resumen[clave] = int(fila.get("total") or 0)
+
+        por_empleado = consultar_todos(
+            """
+            SELECT
+                COALESCE(CAST(empleado_villar_id AS TEXT), CAST(empleado_id AS TEXT), CAST(usuario_id AS TEXT), 'Sin empleado') AS empleado_ref,
+                COUNT(*)::int AS total,
+                SUM(CASE WHEN tipo = 'presencial_sin_app' THEN 1 ELSE 0 END)::int AS presencial_sin_app,
+                SUM(CASE WHEN tipo = 'presencial_sin_app' THEN 0 ELSE 1 END)::int AS presencial_con_app,
+                MAX(creado_en) AS ultimo_analisis
+            FROM analisis_presenciales_pdf
+            GROUP BY 1
+            ORDER BY total DESC, ultimo_analisis DESC NULLS LAST
+            LIMIT 50
+            """
+        )
+
+    if _tabla_existe_local("analisis_piel"):
+        total_app = consultar_uno("SELECT COUNT(*)::int AS total FROM analisis_piel")
+        resumen["app_cliente"] = int((total_app or {}).get("total") or 0)
+
+    resumen["total"] = resumen["presencial_con_app"] + resumen["presencial_sin_app"] + resumen["app_cliente"]
+    resumen["empleados_con_analisis"] = len(por_empleado or [])
+
+    recientes_params = []
+    recientes_where = []
+    incluir_presenciales = filtro in ("todos", "presencial_con_app", "presencial_sin_app")
+    incluir_app = filtro in ("todos", "app_cliente")
+    consultas = []
+
+    if incluir_presenciales and _tabla_existe_local("analisis_presenciales_pdf"):
+        if filtro == "presencial_sin_app":
+            recientes_where = ["tipo = 'presencial_sin_app'"]
+        elif filtro == "presencial_con_app":
+            recientes_where = ["(tipo IS NULL OR tipo <> 'presencial_sin_app')"]
+        else:
+            recientes_where = []
+        where_sql = "WHERE " + " AND ".join(recientes_where) if recientes_where else ""
+        consultas.append(f"""
+            SELECT
+                id::text AS id,
+                CASE WHEN tipo = 'presencial_sin_app' THEN 'presencial_sin_app' ELSE 'presencial_con_app' END AS tipo,
+                CASE WHEN tipo = 'presencial_sin_app' THEN 'Presencial sin app' ELSE 'Presencial con app' END AS etiqueta,
+                COALESCE(titulo, archivo_nombre, 'Análisis presencial') AS titulo,
+                archivo_nombre,
+                creado_en,
+                estado_procesamiento,
+                empleado_villar_id::text AS empleado_villar_id,
+                villar_id::text AS villar_id,
+                valores_extraidos
+            FROM analisis_presenciales_pdf
+            {where_sql}
+        """)
+
+    if incluir_app and _tabla_existe_local("analisis_piel"):
+        consultas.append("""
+            SELECT
+                id::text AS id,
+                'app_cliente' AS tipo,
+                'Hecho en la app' AS etiqueta,
+                COALESCE(resumen_general, condicion_principal_detectada, 'Análisis desde app') AS titulo,
+                NULL::text AS archivo_nombre,
+                creado_en,
+                'completado' AS estado_procesamiento,
+                NULL::text AS empleado_villar_id,
+                villar_id::text AS villar_id,
+                resultado_completo AS valores_extraidos
+            FROM analisis_piel
+        """)
+
+    if consultas:
+        sql = " UNION ALL ".join(consultas) + " ORDER BY creado_en DESC NULLS LAST LIMIT %s"
+        recientes = consultar_todos(sql, (limite,))
+
+    return {
+        "filtro": filtro,
+        "resumen": resumen,
+        "por_empleado": por_empleado or [],
+        "recientes": recientes or [],
+    }
 
 def obtener_pdf_presencial(analisis_id, usuario_actual):
     columnas = _columnas_tabla("analisis_presenciales_pdf")

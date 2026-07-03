@@ -20,11 +20,13 @@ from servicios.servicio_kbeauty_data import (
     exigir_empleado,
     extraer_token_callback,
     guardar_pdf_presencial,
+    guardar_registro_rutina_sin_app_presencial,
     intercambiar_codigo_sso,
     listar_roles,
     listar_usuarios_kbeauty,
     obtener_pdf_presencial,
     obtener_cliente_kdata,
+    obtener_dashboard_analisis_admin,
     usuario_desde_token_web,
     usuario_tiene_rol,
 )
@@ -365,6 +367,7 @@ def _html_base(titulo, contenido, usuario=None, mostrar_nav=True):
     nav_html = f"""
       <nav>
         <a href="/kbeauty-data/admin">Admin</a>
+        <a href="/kbeauty-data/admin/dashboard">Dashboard</a>
         <a href="/kbeauty-data/empleados">Empleados</a>
         <a href="/docs">Docs API</a>
         <div class="right">{sesion}</div>
@@ -388,6 +391,7 @@ def _html_base(titulo, contenido, usuario=None, mostrar_nav=True):
         input,textarea,select {{ width:100%; box-sizing:border-box; padding:12px; border:1px solid #ccd6e3; border-radius:12px; font-size:15px; margin-top:6px; }}
         label {{ font-weight:700; display:block; margin-top:12px; }}
         button,.btn {{ display:inline-block; padding:12px 16px; border:0; border-radius:14px; background:linear-gradient(135deg,#f51d37,#ff6475); color:#fff; font-weight:800; cursor:pointer; text-decoration:none; margin-top:14px; box-shadow:0 12px 24px rgba(245,29,55,.22); }}
+        .btn-soft {{ background:#fff; color:#f51d37; border:1px solid #ffd1dc; box-shadow:none; }}
         table {{ width:100%; border-collapse:collapse; background:#fff; }} th,td {{ padding:12px; border-bottom:1px solid #e5ebf2; text-align:left; vertical-align:top; }}
         th {{ font-size:13px; color:#3a4b63; }} code {{ background:#eef3fa; padding:4px 7px; border-radius:8px; font-size:12px; }}
         .grid {{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }} .ok {{ background:#e7fff2; color:#065f46; padding:12px; border-radius:14px; }}
@@ -463,15 +467,182 @@ def callback_sso(request: Request):
     return respuesta
 
 
+@router.get("/kbeauty-data/admin/dashboard", response_class=HTMLResponse)
+def vista_admin_dashboard(request: Request, filtro: str = Query("todos")):
+    usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/admin/dashboard")
+    if redireccion:
+        return redireccion
+    if not usuario_tiene_rol(usuario, ROLES_ADMIN):
+        return HTMLResponse(_html_base("Sin permiso", "<div class='card'><h1>Acceso denegado</h1><p>Tu usuario no tiene rol admin_kbeauty, admin, administrador o developer.</p></div>", usuario), status_code=403)
+
+    dashboard = obtener_dashboard_analisis_admin(filtro=filtro)
+    resumen = dashboard.get("resumen") or {}
+
+    def activo(valor):
+        return "active" if dashboard.get("filtro") == valor else ""
+
+    filtros = [
+        ("todos", "Todos"),
+        ("presencial_con_app", "Presenciales con app"),
+        ("presencial_sin_app", "Presenciales sin app"),
+        ("app_cliente", "Hechos en la app"),
+    ]
+    filtros_html = "".join([
+        f"<a class='dash-filter {activo(valor)}' href='/kbeauty-data/admin/dashboard?filtro={escape(valor)}'>{escape(texto)}</a>"
+        for valor, texto in filtros
+    ])
+
+    def fmt_fecha(valor):
+        if not valor:
+            return "-"
+        try:
+            return valor.strftime("%d/%m/%Y %I:%M %p")
+        except Exception:
+            return str(valor)
+
+    filas_empleados = "".join([
+        f"""
+        <tr>
+          <td><code>{escape(str(f.get('empleado_ref') or 'Sin empleado'))}</code></td>
+          <td><b>{int(f.get('total') or 0)}</b></td>
+          <td>{int(f.get('presencial_con_app') or 0)}</td>
+          <td>{int(f.get('presencial_sin_app') or 0)}</td>
+          <td>{escape(fmt_fecha(f.get('ultimo_analisis')))}</td>
+        </tr>
+        """ for f in dashboard.get("por_empleado", [])
+    ]) or "<tr><td colspan='5' class='small'>Todavía no hay análisis presenciales registrados por empleado.</td></tr>"
+
+    filas_recientes = "".join([
+        f"""
+        <tr>
+          <td><span class='dash-badge {escape(str(r.get('tipo') or ''))}'>{escape(r.get('etiqueta') or r.get('tipo') or '')}</span></td>
+          <td><b>{escape(r.get('titulo') or 'Análisis')}</b><br><span class='small'>{escape(r.get('archivo_nombre') or '')}</span></td>
+          <td>{escape(fmt_fecha(r.get('creado_en')))}</td>
+          <td>{escape(r.get('estado_procesamiento') or '')}</td>
+          <td><code>{escape(str(r.get('empleado_villar_id') or '-'))}</code></td>
+        </tr>
+        """ for r in dashboard.get("recientes", [])
+    ]) or "<tr><td colspan='5' class='small'>No hay registros para este filtro.</td></tr>"
+
+    contenido = f"""
+    <style>
+      body {{
+        background:
+          radial-gradient(circle at 14% 8%, rgba(255, 103, 119, .22), transparent 34%),
+          radial-gradient(circle at 90% 10%, rgba(255, 213, 218, .58), transparent 32%),
+          linear-gradient(180deg, #fff3f5 0%, #fff9fa 42%, #f6f8fc 100%) !important;
+      }}
+      main.wrap {{ max-width:1220px; }}
+      .admin-hero {{ background:linear-gradient(135deg,#fff,#fff4f6); border:1px solid rgba(245,29,55,.08); }}
+      .dash-grid {{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:24px; }}
+      .dash-card {{ background:#fff; border:1px solid #f0d7dc; border-radius:20px; padding:18px; box-shadow:0 14px 32px rgba(20,36,66,.07); }}
+      .dash-card small {{ display:block; color:#7d7680; font-weight:800; margin-bottom:8px; }}
+      .dash-card b {{ font-size:28px; color:#221f27; }}
+      .dash-filters {{ display:flex; flex-wrap:wrap; gap:10px; margin:14px 0 20px; }}
+      .dash-filter {{ padding:10px 14px; border-radius:999px; text-decoration:none; background:#fff; color:#382f36; font-weight:800; border:1px solid #f0d7dc; }}
+      .dash-filter.active {{ color:#fff; background:linear-gradient(135deg,#f51d37,#ff6475); box-shadow:0 10px 20px rgba(245,29,55,.22); }}
+      .dash-badge {{ display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:900; background:#eef3fa; color:#334155; white-space:nowrap; }}
+      .dash-badge.presencial_con_app {{ background:#e7fff2; color:#047857; }}
+      .dash-badge.presencial_sin_app {{ background:#fff0f3; color:#be123c; }}
+      .dash-badge.app_cliente {{ background:#eef2ff; color:#4338ca; }}
+      .admin-actions {{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }}
+      @media(max-width:1000px) {{ .dash-grid {{ grid-template-columns:repeat(2,1fr); }} }}
+      @media(max-width:620px) {{ .dash-grid {{ grid-template-columns:1fr; }} }}
+    </style>
+    <div class='hero admin-hero'>
+      <h1>Dashboard de análisis</h1>
+      <p>Vista separada por presenciales con app, presenciales sin app y análisis hechos en la app.</p>
+      <div class='admin-actions'>
+        <a class='btn' href='/kbeauty-data/admin'>Volver al admin</a>
+        <a class='btn btn-soft' href='/kbeauty-data/empleados'>Ir a empleados</a>
+      </div>
+    </div>
+
+    <div class='dash-grid'>
+      <div class='dash-card'><small>Total análisis</small><b>{int(resumen.get('total') or 0)}</b></div>
+      <div class='dash-card'><small>Presenciales con app</small><b>{int(resumen.get('presencial_con_app') or 0)}</b></div>
+      <div class='dash-card'><small>Presenciales sin app</small><b>{int(resumen.get('presencial_sin_app') or 0)}</b></div>
+      <div class='dash-card'><small>Hechos en la app</small><b>{int(resumen.get('app_cliente') or 0)}</b></div>
+      <div class='dash-card'><small>Empleados con análisis</small><b>{int(resumen.get('empleados_con_analisis') or 0)}</b></div>
+    </div>
+
+    <div class='card'>
+      <h2>Filtros</h2>
+      <div class='dash-filters'>{filtros_html}</div>
+    </div>
+
+    <div class='card'>
+      <h2>Análisis por empleado</h2>
+      <table><thead><tr><th>Empleado Villar ID / ID</th><th>Total</th><th>Con app</th><th>Sin app</th><th>Último análisis</th></tr></thead><tbody>{filas_empleados}</tbody></table>
+    </div>
+
+    <div class='card'>
+      <h2>Registros recientes</h2>
+      <table><thead><tr><th>Tipo</th><th>Análisis</th><th>Fecha</th><th>Estado</th><th>Empleado</th></tr></thead><tbody>{filas_recientes}</tbody></table>
+    </div>
+    """
+    return HTMLResponse(_html_base("KBEAUTY-DATA Dashboard", contenido, usuario))
+
+
 @router.get("/kbeauty-data/admin", response_class=HTMLResponse)
-def vista_admin(request: Request, q: str = ""):
+def vista_admin(request: Request, q: str = "", filtro: str = Query("todos")):
     usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/admin")
     if redireccion:
         return redireccion
     if not usuario_tiene_rol(usuario, ROLES_ADMIN):
         return HTMLResponse(_html_base("Sin permiso", "<div class='card'><h1>Acceso denegado</h1><p>Tu usuario no tiene rol admin_kbeauty, admin, administrador o developer.</p></div>", usuario), status_code=403)
+
     roles = listar_roles()
     usuarios = listar_usuarios_kbeauty(q, token=usuario.get("token_villar_do"), datos_sesion=usuario.get("datos_villar"))
+    dashboard = obtener_dashboard_analisis_admin(filtro=filtro)
+    resumen = dashboard.get("resumen") or {}
+
+    def activo(valor):
+        return "active" if dashboard.get("filtro") == valor else ""
+
+    filtros = [
+        ("todos", "Todos"),
+        ("presencial_con_app", "Presenciales con app"),
+        ("presencial_sin_app", "Presenciales sin app"),
+        ("app_cliente", "Hechos en la app"),
+    ]
+    filtros_html = "".join([
+        f"<a class='dash-filter {activo(valor)}' href='/kbeauty-data/admin?filtro={escape(valor)}&q={escape(q or '')}'>{escape(texto)}</a>"
+        for valor, texto in filtros
+    ])
+
+    def fmt_fecha(valor):
+        if not valor:
+            return "-"
+        try:
+            return valor.strftime("%d/%m/%Y %I:%M %p")
+        except Exception:
+            return str(valor)
+
+    filas_empleados = "".join([
+        f"""
+        <tr>
+          <td><code>{escape(str(f.get('empleado_ref') or 'Sin empleado'))}</code></td>
+          <td><b>{int(f.get('total') or 0)}</b></td>
+          <td>{int(f.get('presencial_con_app') or 0)}</td>
+          <td>{int(f.get('presencial_sin_app') or 0)}</td>
+          <td>{escape(fmt_fecha(f.get('ultimo_analisis')))}</td>
+        </tr>
+        """ for f in dashboard.get("por_empleado", [])
+    ]) or "<tr><td colspan='5' class='small'>Todavía no hay análisis presenciales registrados por empleado.</td></tr>"
+
+    filas_recientes = "".join([
+        f"""
+        <tr>
+          <td><span class='dash-badge {escape(str(r.get('tipo') or ''))}'>{escape(r.get('etiqueta') or r.get('tipo') or '')}</span></td>
+          <td><b>{escape(r.get('titulo') or 'Análisis')}</b><br><span class='small'>{escape(r.get('archivo_nombre') or '')}</span></td>
+          <td>{escape(fmt_fecha(r.get('creado_en')))}</td>
+          <td>{escape(r.get('estado_procesamiento') or '')}</td>
+          <td><code>{escape(str(r.get('empleado_villar_id') or '-'))}</code></td>
+        </tr>
+        """ for r in dashboard.get("recientes", [])
+    ]) or "<tr><td colspan='5' class='small'>No hay registros para este filtro.</td></tr>"
+
     filas_roles = "".join([f"<option value='{escape(r['codigo'])}'>{escape(r['codigo'])} - {escape(r['nombre'])}</option>" for r in roles])
     filas = "".join([
         f"""
@@ -484,13 +655,60 @@ def vista_admin(request: Request, q: str = ""):
         </tr>
         """ for u in usuarios
     ])
+
     contenido = f"""
-    <div class='hero'>
+    <style>
+      body {{
+        background:
+          radial-gradient(circle at 14% 8%, rgba(255, 103, 119, .22), transparent 34%),
+          radial-gradient(circle at 90% 10%, rgba(255, 213, 218, .58), transparent 32%),
+          linear-gradient(180deg, #fff3f5 0%, #fff9fa 42%, #f6f8fc 100%) !important;
+      }}
+      main.wrap {{ max-width:1220px; }}
+      .admin-hero {{ background:linear-gradient(135deg,#fff,#fff4f6); border:1px solid rgba(245,29,55,.08); }}
+      .dash-grid {{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:24px; }}
+      .dash-card {{ background:#fff; border:1px solid #f0d7dc; border-radius:20px; padding:18px; box-shadow:0 14px 32px rgba(20,36,66,.07); }}
+      .dash-card small {{ display:block; color:#7d7680; font-weight:800; margin-bottom:8px; }}
+      .dash-card b {{ font-size:28px; color:#221f27; }}
+      .dash-filters {{ display:flex; flex-wrap:wrap; gap:10px; margin:14px 0 20px; }}
+      .dash-filter {{ padding:10px 14px; border-radius:999px; text-decoration:none; background:#fff; color:#382f36; font-weight:800; border:1px solid #f0d7dc; }}
+      .dash-filter.active {{ color:#fff; background:linear-gradient(135deg,#f51d37,#ff6475); box-shadow:0 10px 20px rgba(245,29,55,.22); }}
+      .dash-badge {{ display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:900; background:#eef3fa; color:#334155; white-space:nowrap; }}
+      .dash-badge.presencial_con_app {{ background:#e7fff2; color:#047857; }}
+      .dash-badge.presencial_sin_app {{ background:#fff0f3; color:#be123c; }}
+      .dash-badge.app_cliente {{ background:#eef2ff; color:#4338ca; }}
+      .admin-section-title {{ display:flex; align-items:end; justify-content:space-between; gap:14px; margin-bottom:12px; }}
+      @media(max-width:1000px) {{ .dash-grid {{ grid-template-columns:repeat(2,1fr); }} }}
+      @media(max-width:620px) {{ .dash-grid {{ grid-template-columns:1fr; }} }}
+    </style>
+    <div class='hero admin-hero'>
       <h1>KBEAUTY-DATA Admin</h1>
-      <p>Protegido con SSO Villar.do. Vista temporal para crear/asignar roles.</p>
+      <p>Dashboard de análisis separado por origen y control de roles de empleados.</p>
       <div class='ok'>Login activo con Villar.do usando VILLAR_DO_APP_KEY.</div>
+      <div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:14px'>
+        <a class='btn' href='/kbeauty-data/admin/dashboard'>Abrir dashboard</a>
+        <a class='btn btn-soft' href='/kbeauty-data/empleados'>Ir a vista empleados</a>
+      </div>
       <p class='small'>Roles de tu sesion: {escape(', '.join(sorted(codigos_roles(usuario))))}</p>
     </div>
+
+    <div class='dash-grid'>
+      <div class='dash-card'><small>Total análisis</small><b>{int(resumen.get('total') or 0)}</b></div>
+      <div class='dash-card'><small>Presenciales con app</small><b>{int(resumen.get('presencial_con_app') or 0)}</b></div>
+      <div class='dash-card'><small>Presenciales sin app</small><b>{int(resumen.get('presencial_sin_app') or 0)}</b></div>
+      <div class='dash-card'><small>Hechos en la app</small><b>{int(resumen.get('app_cliente') or 0)}</b></div>
+      <div class='dash-card'><small>Empleados con análisis</small><b>{int(resumen.get('empleados_con_analisis') or 0)}</b></div>
+    </div>
+
+    <div class='card'>
+      <div class='admin-section-title'><div><h2>Dashboard de análisis</h2><p class='small'>Filtra por presenciales con app, presenciales sin app o análisis hechos por clientes en la app.</p></div></div>
+      <div class='dash-filters'>{filtros_html}</div>
+      <h3>Análisis por empleado</h3>
+      <table><thead><tr><th>Empleado Villar ID / ID</th><th>Total</th><th>Con app</th><th>Sin app</th><th>Último análisis</th></tr></thead><tbody>{filas_empleados}</tbody></table>
+      <h3 style='margin-top:24px'>Registros recientes</h3>
+      <table><thead><tr><th>Tipo</th><th>Análisis</th><th>Fecha</th><th>Estado</th><th>Empleado</th></tr></thead><tbody>{filas_recientes}</tbody></table>
+    </div>
+
     <div class='grid'>
       <div class='card'>
         <h2>Crear rol</h2>
@@ -513,6 +731,7 @@ def vista_admin(request: Request, q: str = ""):
     <div class='card'>
       <h2>Usuarios KBeauty + datos Villar.do</h2>
       <form method='get' action='/kbeauty-data/admin'>
+        <input type='hidden' name='filtro' value='{escape(dashboard.get('filtro') or 'todos')}'>
         <label>Buscar por id o Villar ID</label><input name='q' value='{escape(q or '')}' placeholder='uuid'>
         <button>Buscar</button>
       </form>
@@ -1450,6 +1669,15 @@ async def descargar_rutina_sin_app_pdf(
             respuesta_error('El archivo de la maquina no parece ser un PDF valido', 400)
         pdf = _combinar_pdf_rutina_con_maquina(pdf, contenido_maquina)
     archivo = f"rutina_kbeauty_{_nombre_archivo_seguro(nombre)}.pdf"
+    guardar_registro_rutina_sin_app_presencial(
+        usuario,
+        pdf,
+        archivo,
+        nombre,
+        telefono,
+        rutina,
+        rutina_indice=rutina_indice,
+    )
     return Response(
         content=pdf,
         media_type="application/pdf",
