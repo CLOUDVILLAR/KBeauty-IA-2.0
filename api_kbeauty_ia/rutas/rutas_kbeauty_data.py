@@ -25,6 +25,7 @@ from servicios.servicio_kbeauty_data import (
     listar_roles,
     listar_usuarios_kbeauty,
     obtener_pdf_presencial,
+    quitar_rol_a_villar_id,
     obtener_cliente_kdata,
     obtener_dashboard_analisis_admin,
     usuario_desde_token_web,
@@ -467,6 +468,7 @@ def callback_sso(request: Request):
 
 
 
+
 @router.get("/kbeauty-data/admin", response_class=HTMLResponse)
 def vista_admin(request: Request, q: str = ""):
     usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/admin")
@@ -477,18 +479,64 @@ def vista_admin(request: Request, q: str = ""):
 
     roles = listar_roles()
     usuarios = listar_usuarios_kbeauty(q, token=usuario.get("token_villar_do"), datos_sesion=usuario.get("datos_villar"))
-    filas_roles = "".join([f"<option value='{escape(r['codigo'])}'>{escape(r['codigo'])} - {escape(r['nombre'])}</option>" for r in roles])
+    roles_por_codigo = [str(r.get("codigo") or "") for r in roles if r.get("codigo")]
+
+    def opciones_roles_modal(usuario_item):
+        actuales = {str(r.get("codigo") or "") for r in usuario_item.get("roles", []) if r.get("codigo")}
+        return "".join([
+            f"""
+            <label class='role-check'>
+              <input type='checkbox' name='roles_seleccionados' value='{escape(codigo)}' {'checked' if codigo in actuales else ''}>
+              <span><b>{escape(codigo)}</b><small>{escape(next((rol.get('nombre') or '') for rol in roles if rol.get('codigo') == codigo), quote=False)}</small></span>
+            </label>
+            """
+            for codigo in roles_por_codigo
+        ]) or "<p class='small'>No hay roles creados todavía.</p>"
+
+    return_to = f"/kbeauty-data/admin?q={quote(q or '')}"
     filas = "".join([
         f"""
         <tr>
-          <td><b>{escape(u.get('villar_nombre') or 'Sin nombre')}</b><br><span class='small'>{escape(u.get('villar_correo') or 'Correo no disponible')}</span><br><span class='small'>{escape(u.get('villar_telefono') or '')}</span>{f"<br><span class='small'>Villar.do: {escape(u.get('villar_error'))}</span>" if u.get('villar_error') else ""}</td>
+          <td>
+            <div class='user-cell'>
+              <div>
+                <b>{escape(u.get('villar_nombre') or 'Sin nombre')}</b><br>
+                <span class='small'>{escape(u.get('villar_correo') or 'Correo no disponible')}</span><br>
+                <span class='small'>{escape(u.get('villar_telefono') or '')}</span>
+                {f"<br><span class='small'>Villar.do: {escape(u.get('villar_error'))}</span>" if u.get('villar_error') else ""}
+              </div>
+              <button type='button' class='edit-user-btn' onclick="openRoleModal('roles-{escape(str(u.get('villar_id')))}')">Editar roles</button>
+            </div>
+            <div class='role-modal' id='roles-{escape(str(u.get('villar_id')))}' aria-hidden='true'>
+              <div class='role-modal-backdrop' onclick="closeRoleModal('roles-{escape(str(u.get('villar_id')))}')"></div>
+              <div class='role-modal-card' role='dialog' aria-modal='true'>
+                <div class='role-modal-head'>
+                  <div>
+                    <h2>Editar roles</h2>
+                    <p>{escape(u.get('villar_nombre') or 'Usuario')}</p>
+                    <small>{escape(str(u.get('villar_id') or ''))}</small>
+                  </div>
+                  <button type='button' class='modal-close' onclick="closeRoleModal('roles-{escape(str(u.get('villar_id')))}')">×</button>
+                </div>
+                <form method='post' action='/kbeauty-data/admin/usuarios/roles/actualizar'>
+                  <input type='hidden' name='villar_id' value='{escape(str(u.get('villar_id') or ''))}'>
+                  <input type='hidden' name='return_to' value='{escape(return_to, quote=True)}'>
+                  <div class='roles-list'>{opciones_roles_modal(u)}</div>
+                  <div class='modal-actions'>
+                    <button type='button' class='btn-light' onclick="closeRoleModal('roles-{escape(str(u.get('villar_id')))}')">Cancelar</button>
+                    <button type='submit'>Guardar cambios</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </td>
           <td><code>{escape(str(u.get('id')))}</code></td>
           <td><code>{escape(str(u.get('villar_id')))}</code></td>
-          <td>{''.join([f"<span class='pill'>{escape(r.get('codigo',''))}</span>" for r in u.get('roles', [])])}</td>
+          <td>{''.join([f"<span class='pill'>{escape(r.get('codigo',''))}</span>" for r in u.get('roles', [])]) or "<span class='small'>Sin roles</span>"}</td>
           <td>{escape(u.get('tipo_piel') or '')}<br><span class='small'>{escape(u.get('condicion_principal') or '')}</span></td>
         </tr>
         """ for u in usuarios
-    ])
+    ]) or "<tr><td colspan='5' class='small'>No hay usuarios para mostrar.</td></tr>"
 
     contenido = f"""
     <style>
@@ -503,6 +551,29 @@ def vista_admin(request: Request, q: str = ""):
       .admin-actions {{ display:flex; gap:12px; flex-wrap:wrap; margin-top:18px; }}
       .primary-link {{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:13px 18px; border-radius:16px; text-decoration:none; font-weight:900; color:#fff; background:linear-gradient(135deg,#f51d37,#ff6475); box-shadow:0 14px 28px rgba(245,29,55,.22); }}
       .secondary-link {{ display:inline-flex; align-items:center; justify-content:center; padding:13px 18px; border-radius:16px; text-decoration:none; font-weight:900; color:#332a31; background:#fff; border:1px solid #f0d7dc; }}
+      .role-tools {{ display:grid; grid-template-columns:minmax(260px, 520px) 1fr; gap:20px; align-items:start; }}
+      .soft-card {{ background:linear-gradient(135deg,#fff,#fff8fa); border:1px solid #f0d7dc; border-radius:22px; padding:20px; box-shadow:0 14px 32px rgba(20,36,66,.06); }}
+      .users-head {{ display:flex; justify-content:space-between; gap:14px; align-items:flex-start; margin-bottom:18px; }}
+      .search-inline {{ display:grid; grid-template-columns:minmax(220px,1fr) auto; gap:10px; align-items:end; margin-top:12px; }}
+      .user-cell {{ display:flex; justify-content:space-between; align-items:flex-start; gap:14px; min-width:260px; }}
+      .edit-user-btn {{ margin-top:0; padding:9px 12px; border-radius:12px; font-size:12px; white-space:nowrap; box-shadow:0 9px 18px rgba(245,29,55,.16); }}
+      .role-modal {{ position:fixed; inset:0; display:none; z-index:1000; }}
+      .role-modal.open {{ display:block; }}
+      .role-modal-backdrop {{ position:absolute; inset:0; background:rgba(12,18,32,.48); backdrop-filter:blur(5px); }}
+      .role-modal-card {{ position:relative; width:min(560px, calc(100% - 32px)); max-height:calc(100vh - 48px); overflow:auto; margin:24px auto; background:#fff; border-radius:28px; box-shadow:0 34px 90px rgba(17,24,39,.26); border:1px solid rgba(255,255,255,.88); }}
+      .role-modal-head {{ display:flex; justify-content:space-between; gap:14px; padding:24px 24px 12px; border-bottom:1px solid #f4dfe4; }}
+      .role-modal-head h2 {{ margin:0 0 4px; }}
+      .role-modal-head p {{ margin:0; font-weight:900; color:#251f27; }}
+      .role-modal-head small {{ display:block; margin-top:4px; color:#7d7680; word-break:break-all; }}
+      .modal-close {{ margin:0; width:38px; height:38px; border-radius:14px; padding:0; background:#fff0f3; color:#be123c; box-shadow:none; font-size:24px; line-height:1; }}
+      .roles-list {{ padding:18px 24px 8px; display:grid; gap:10px; }}
+      .role-check {{ display:flex; align-items:center; gap:12px; margin:0; padding:13px; border:1px solid #f0d7dc; border-radius:18px; background:#fff8fa; cursor:pointer; }}
+      .role-check input {{ width:auto; margin:0; transform:scale(1.1); accent-color:#f51d37; }}
+      .role-check span {{ display:block; }}
+      .role-check small {{ display:block; color:#7d7680; font-weight:700; margin-top:2px; }}
+      .modal-actions {{ display:flex; justify-content:flex-end; gap:10px; padding:14px 24px 24px; }}
+      .btn-light {{ background:#fff; color:#332a31; border:1px solid #f0d7dc; box-shadow:none; }}
+      @media(max-width:820px) {{ .role-tools,.search-inline {{ grid-template-columns:1fr; }} .users-head {{ display:block; }} .user-cell {{ display:block; }} .edit-user-btn {{ margin-top:10px; }} }}
     </style>
     <div class='hero admin-hero'>
       <h1>KBEAUTY-DATA Admin</h1>
@@ -511,13 +582,14 @@ def vista_admin(request: Request, q: str = ""):
       <p class='small'>Roles de tu sesion: {escape(', '.join(sorted(codigos_roles(usuario))))}</p>
       <div class='admin-actions'>
         <a class='primary-link' href='/kbeauty-data/admin/dashboard'>📊 Abrir dashboard de análisis</a>
-        <a class='secondary-link' href='/kbeauty-data/empleados'>Ir a vista empleados</a>
+        <a class='secondary-link' href='/kbeauty-data/empleados'>Vista empleados</a>
       </div>
     </div>
 
-    <div class='grid'>
-      <div class='card'>
+    <div class='role-tools'>
+      <div class='soft-card'>
         <h2>Crear rol</h2>
+        <p class='small'>Usa esto solo cuando necesites crear un rol nuevo. Para asignar, cambiar o quitar roles, usa el botón “Editar roles” en cada usuario.</p>
         <form method='post' action='/kbeauty-data/admin/roles/crear'>
           <label>Codigo</label><input name='codigo' value='kbeauty_data'>
           <label>Nombre</label><input name='nombre' value='Empleado KBEAUTY-DATA'>
@@ -525,23 +597,45 @@ def vista_admin(request: Request, q: str = ""):
           <button>Crear rol</button>
         </form>
       </div>
-      <div class='card'>
-        <h2>Asignar rol</h2>
-        <form method='post' action='/kbeauty-data/admin/roles/asignar'>
-          <label>Villar ID del usuario</label><input name='villar_id' placeholder='uuid del usuario'>
-          <label>Rol</label><select name='codigo_rol'>{filas_roles}</select>
-          <button>Asignar rol</button>
-        </form>
+      <div class='soft-card'>
+        <h2>Edición por usuario</h2>
+        <p class='small'>Ya no hay formulario separado para asignar roles. Cada usuario tiene su propio botón de edición para evitar copiar y pegar Villar ID manualmente.</p>
       </div>
     </div>
+
     <div class='card'>
-      <h2>Usuarios KBeauty + datos Villar.do</h2>
-      <form method='get' action='/kbeauty-data/admin'>
-        <label>Buscar por id o Villar ID</label><input name='q' value='{escape(q or '')}' placeholder='uuid'>
+      <div class='users-head'>
+        <div>
+          <h2>Usuarios KBeauty + datos Villar.do</h2>
+          <p class='small'>Edita roles desde la fila de cada usuario.</p>
+        </div>
+      </div>
+      <form class='search-inline' method='get' action='/kbeauty-data/admin'>
+        <div>
+          <label>Buscar por id o Villar ID</label><input name='q' value='{escape(q or '')}' placeholder='uuid'>
+        </div>
         <button>Buscar</button>
       </form>
       <table><thead><tr><th>Usuario Villar.do</th><th>ID KBeauty</th><th>Villar ID</th><th>Roles</th><th>Perfil</th></tr></thead><tbody>{filas}</tbody></table>
     </div>
+    <script>
+      function openRoleModal(id) {{
+        const el = document.getElementById(id);
+        if (el) {{ el.classList.add('open'); el.setAttribute('aria-hidden', 'false'); }}
+      }}
+      function closeRoleModal(id) {{
+        const el = document.getElementById(id);
+        if (el) {{ el.classList.remove('open'); el.setAttribute('aria-hidden', 'true'); }}
+      }}
+      document.addEventListener('keydown', function(event) {{
+        if (event.key === 'Escape') {{
+          document.querySelectorAll('.role-modal.open').forEach(function(el) {{
+            el.classList.remove('open');
+            el.setAttribute('aria-hidden', 'true');
+          }});
+        }}
+      }});
+    </script>
     """
     return HTMLResponse(_html_base("KBEAUTY-DATA Admin", contenido, usuario))
 
