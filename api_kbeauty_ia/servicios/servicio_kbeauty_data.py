@@ -685,11 +685,18 @@ def guardar_registro_rutina_sin_app_presencial(empleado_usuario, pdf_bytes, arch
     return ejecutar(sql, tuple(valores), retornar=True)
 
 
-def obtener_dashboard_analisis_admin(filtro="todos", limite=30):
-    """Construye metricas del dashboard admin separando origenes de analisis."""
+
+def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", limite=50, token=None, datos_sesion=None):
+    """Construye metricas del dashboard admin separando origenes de analisis.
+
+    - Presenciales con/sin app salen de analisis_presenciales_pdf.
+    - Analisis hechos por el cliente en la app salen de analisis_piel.
+    - empleado_filtro aplica solo a presenciales porque los analisis de app no tienen empleado.
+    """
     filtro = (filtro or "todos").strip()
     if filtro not in {"todos", "presencial_con_app", "presencial_sin_app", "app_cliente"}:
         filtro = "todos"
+    empleado_filtro = str(empleado_filtro or "").strip()
 
     resumen = {
         "total": 0,
@@ -700,10 +707,27 @@ def obtener_dashboard_analisis_admin(filtro="todos", limite=30):
     }
     por_empleado = []
     recientes = []
+    empleados_opciones = []
 
-    if _tabla_existe_local("analisis_presenciales_pdf"):
+    existe_presenciales = _tabla_existe_local("analisis_presenciales_pdf")
+    existe_app = _tabla_existe_local("analisis_piel")
+
+    where_empleado = ""
+    params_empleado = []
+    if empleado_filtro:
+        where_empleado = """
+        WHERE COALESCE(
+            CAST(empleado_villar_id AS TEXT),
+            CAST(empleado_id AS TEXT),
+            CAST(usuario_id AS TEXT),
+            ''
+        ) = %s
+        """
+        params_empleado.append(empleado_filtro)
+
+    if existe_presenciales:
         filas_presenciales = consultar_todos(
-            """
+            f"""
             SELECT
                 CASE
                     WHEN tipo = 'presencial_sin_app' THEN 'presencial_sin_app'
@@ -711,8 +735,10 @@ def obtener_dashboard_analisis_admin(filtro="todos", limite=30):
                 END AS tipo_dashboard,
                 COUNT(*)::int AS total
             FROM analisis_presenciales_pdf
+            {where_empleado}
             GROUP BY 1
-            """
+            """,
+            tuple(params_empleado),
         )
         for fila in filas_presenciales or []:
             clave = fila.get("tipo_dashboard")
@@ -730,71 +756,128 @@ def obtener_dashboard_analisis_admin(filtro="todos", limite=30):
             FROM analisis_presenciales_pdf
             GROUP BY 1
             ORDER BY total DESC, ultimo_analisis DESC NULLS LAST
-            LIMIT 50
+            LIMIT 200
             """
-        )
+        ) or []
 
-    if _tabla_existe_local("analisis_piel"):
+        empleados_opciones = list(por_empleado)
+        if empleado_filtro:
+            por_empleado = [e for e in por_empleado if str(e.get("empleado_ref") or "") == empleado_filtro]
+
+    # Los analisis de app no tienen empleado. Si el admin filtra por empleado,
+    # mostramos solo los presenciales de ese empleado.
+    if existe_app and not empleado_filtro:
         total_app = consultar_uno("SELECT COUNT(*)::int AS total FROM analisis_piel")
         resumen["app_cliente"] = int((total_app or {}).get("total") or 0)
 
     resumen["total"] = resumen["presencial_con_app"] + resumen["presencial_sin_app"] + resumen["app_cliente"]
-    resumen["empleados_con_analisis"] = len(por_empleado or [])
+    resumen["empleados_con_analisis"] = len([e for e in empleados_opciones if int(e.get("total") or 0) > 0])
 
-    recientes_params = []
-    recientes_where = []
     incluir_presenciales = filtro in ("todos", "presencial_con_app", "presencial_sin_app")
-    incluir_app = filtro in ("todos", "app_cliente")
+    incluir_app = filtro in ("todos", "app_cliente") and not empleado_filtro
     consultas = []
+    params = []
 
-    if incluir_presenciales and _tabla_existe_local("analisis_presenciales_pdf"):
+    if incluir_presenciales and existe_presenciales:
+        condiciones = []
         if filtro == "presencial_sin_app":
-            recientes_where = ["tipo = 'presencial_sin_app'"]
+            condiciones.append("tipo = 'presencial_sin_app'")
         elif filtro == "presencial_con_app":
-            recientes_where = ["(tipo IS NULL OR tipo <> 'presencial_sin_app')"]
-        else:
-            recientes_where = []
-        where_sql = "WHERE " + " AND ".join(recientes_where) if recientes_where else ""
+            condiciones.append("(tipo IS NULL OR tipo <> 'presencial_sin_app')")
+        if empleado_filtro:
+            condiciones.append("COALESCE(CAST(empleado_villar_id AS TEXT), CAST(empleado_id AS TEXT), CAST(usuario_id AS TEXT), '') = %s")
+            params.append(empleado_filtro)
+        where_sql = "WHERE " + " AND ".join(condiciones) if condiciones else ""
         consultas.append(f"""
             SELECT
                 id::text AS id,
                 CASE WHEN tipo = 'presencial_sin_app' THEN 'presencial_sin_app' ELSE 'presencial_con_app' END AS tipo,
                 CASE WHEN tipo = 'presencial_sin_app' THEN 'Presencial sin app' ELSE 'Presencial con app' END AS etiqueta,
-                COALESCE(titulo, archivo_nombre, 'Análisis presencial') AS titulo,
-                archivo_nombre,
                 creado_en,
                 estado_procesamiento,
+                COALESCE(CAST(empleado_villar_id AS TEXT), CAST(empleado_id AS TEXT), CAST(usuario_id AS TEXT), '') AS empleado_ref,
                 empleado_villar_id::text AS empleado_villar_id,
                 villar_id::text AS villar_id,
+                COALESCE(valores_extraidos->>'cliente_nombre', valores_extraidos->>'nombre_cliente', valores_extraidos->>'cliente') AS cliente_nombre,
+                COALESCE(valores_extraidos->>'cliente_telefono', valores_extraidos->>'telefono_cliente', valores_extraidos->>'telefono') AS cliente_telefono,
+                archivo_nombre,
                 valores_extraidos
             FROM analisis_presenciales_pdf
             {where_sql}
         """)
 
-    if incluir_app and _tabla_existe_local("analisis_piel"):
+    if incluir_app and existe_app:
         consultas.append("""
             SELECT
                 id::text AS id,
                 'app_cliente' AS tipo,
                 'Hecho en la app' AS etiqueta,
-                COALESCE(resumen_general, condicion_principal_detectada, 'Análisis desde app') AS titulo,
-                NULL::text AS archivo_nombre,
                 creado_en,
                 'completado' AS estado_procesamiento,
+                ''::text AS empleado_ref,
                 NULL::text AS empleado_villar_id,
                 villar_id::text AS villar_id,
+                NULL::text AS cliente_nombre,
+                NULL::text AS cliente_telefono,
+                NULL::text AS archivo_nombre,
                 resultado_completo AS valores_extraidos
             FROM analisis_piel
         """)
 
     if consultas:
         sql = " UNION ALL ".join(consultas) + " ORDER BY creado_en DESC NULLS LAST LIMIT %s"
-        recientes = consultar_todos(sql, (limite,))
+        params.append(int(limite or 50))
+        recientes = consultar_todos(sql, tuple(params)) or []
+
+    # Enriquecimiento visual para el dashboard: nombres/telefonos desde Villar ID
+    # cuando el registro no trae esos datos en JSONB.
+    cache_villar = {}
+
+    def info_villar_cached(villar_id):
+        villar_id = str(villar_id or "").strip()
+        if not villar_id:
+            return {}
+        if villar_id not in cache_villar:
+            try:
+                cache_villar[villar_id] = obtener_info_villar(villar_id, token=token, datos_sesion=datos_sesion) or {}
+            except Exception:
+                cache_villar[villar_id] = {}
+        return cache_villar[villar_id]
+
+    for fila in recientes:
+        if not fila.get("cliente_nombre") and fila.get("villar_id"):
+            info = info_villar_cached(fila.get("villar_id"))
+            fila["cliente_nombre"] = info.get("nombre") or fila.get("villar_id")
+            fila["cliente_telefono"] = info.get("telefono") or info.get("correo") or fila.get("cliente_telefono")
+        if not fila.get("cliente_nombre"):
+            fila["cliente_nombre"] = "Cliente sin app" if fila.get("tipo") == "presencial_sin_app" else "Cliente"
+        if not fila.get("cliente_telefono"):
+            fila["cliente_telefono"] = "-"
+        if fila.get("empleado_villar_id"):
+            info_emp = info_villar_cached(fila.get("empleado_villar_id"))
+            fila["empleado_nombre"] = info_emp.get("nombre") or fila.get("empleado_ref") or "Empleado"
+        elif fila.get("empleado_ref"):
+            fila["empleado_nombre"] = fila.get("empleado_ref")
+        else:
+            fila["empleado_nombre"] = "Cliente app"
+
+    for fila in por_empleado:
+        ref = fila.get("empleado_ref")
+        info_emp = info_villar_cached(ref)
+        fila["empleado_nombre"] = info_emp.get("nombre") or str(ref or "Sin empleado")
+        fila["empleado_telefono"] = info_emp.get("telefono") or info_emp.get("correo") or ""
+
+    for fila in empleados_opciones:
+        ref = fila.get("empleado_ref")
+        info_emp = info_villar_cached(ref)
+        fila["empleado_nombre"] = info_emp.get("nombre") or str(ref or "Sin empleado")
 
     return {
         "filtro": filtro,
+        "empleado_filtro": empleado_filtro,
         "resumen": resumen,
         "por_empleado": por_empleado or [],
+        "empleados_opciones": empleados_opciones or [],
         "recientes": recientes or [],
     }
 
