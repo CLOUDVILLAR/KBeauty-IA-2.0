@@ -860,6 +860,7 @@ def vista_dashboard_admin(
 @router.get("/kbeauty-data/admin/estadisticas", response_class=HTMLResponse)
 def vista_estadisticas_admin(
     request: Request,
+    filtro: str = Query("todos"),
     fecha_desde: str = Query(""),
     fecha_hasta: str = Query(""),
 ):
@@ -869,82 +870,126 @@ def vista_estadisticas_admin(
     exigir_admin(usuario)
 
     estadisticas = obtener_estadisticas_condiciones_admin(
+        filtro=filtro,
         fecha_desde=fecha_desde,
         fecha_hasta=fecha_hasta,
     )
     resumen = estadisticas.get("resumen") or {}
-    total = max(int(resumen.get("total") or 0), 1)
+    filtro_actual = estadisticas.get("filtro") or "todos"
+    fecha_desde_actual = estadisticas.get("fecha_desde") or ""
+    fecha_hasta_actual = estadisticas.get("fecha_hasta") or ""
+
+    def activo(valor):
+        return "active" if filtro_actual == valor else ""
+
+    def qs(valor_filtro=None, valor_fecha_desde=None, valor_fecha_hasta=None):
+        f = quote(str(valor_filtro if valor_filtro is not None else filtro_actual))
+        fd = quote(str(valor_fecha_desde if valor_fecha_desde is not None else fecha_desde_actual))
+        fh = quote(str(valor_fecha_hasta if valor_fecha_hasta is not None else fecha_hasta_actual))
+        return f"/kbeauty-data/admin/estadisticas?filtro={f}&fecha_desde={fd}&fecha_hasta={fh}"
+
+    filtros = [
+        ("todos", "Todos"),
+        ("presencial_con_app", "Presenciales con app"),
+        ("presencial_sin_app", "Presenciales sin app"),
+        ("app_cliente", "Hechos en la app"),
+    ]
+    filtros_html = "".join([
+        f"<a class='stat-filter {activo(valor)}' href='{qs(valor_filtro=valor)}'>{escape(texto)}</a>"
+        for valor, texto in filtros
+    ])
+
+    total_visible = sum(int(f.get("total") or 0) for f in estadisticas.get("por_tipo_condicion", []))
+    total_barra = max(total_visible, 1)
 
     def barra(valor):
-        return round((int(valor or 0) / total) * 100, 2)
+        return round((int(valor or 0) / total_barra) * 100, 2)
 
-    filas_condicion = "".join([
+    filas_tipo_condicion = "".join([
         f"""
         <tr>
-          <td><b>{escape(f.get('condicion') or 'Sin condición')}</b></td>
+          <td><b>{escape(f.get('tipo_piel_condicion') or 'Sin tipo / condición')}</b><br><span class='small'>Tipo piel: {escape(f.get('tipo_piel') or '-')} · Condición: {escape(f.get('condicion') or '-')}</span></td>
           <td>{int(f.get('total') or 0)}</td>
           <td><div class='stat-track'><span style='width:{barra(f.get('total'))}%'></span></div></td>
         </tr>
-        """ for f in estadisticas.get("por_condicion", [])
-    ]) or "<tr><td colspan='3' class='small'>No hay datos para este filtro.</td></tr>"
-
-    filas_tipo = "".join([
-        f"""
-        <tr>
-          <td><b>{escape(f.get('tipo_piel') or 'Sin tipo de piel')}</b></td>
-          <td>{int(f.get('total') or 0)}</td>
-          <td><div class='stat-track'><span style='width:{barra(f.get('total'))}%'></span></div></td>
-        </tr>
-        """ for f in estadisticas.get("por_tipo_piel", [])
+        """ for f in estadisticas.get("por_tipo_condicion", [])
     ]) or "<tr><td colspan='3' class='small'>No hay datos para este filtro.</td></tr>"
 
     contenido = f"""
     <style>
-      main.wrap {{ max-width:1100px; }}
-      .stat-hero {{ color:#fff; background:linear-gradient(135deg,#f51d37,#ff8791); box-shadow:0 28px 62px rgba(245,29,55,.22); }}
-      .stat-hero h1,.stat-hero p {{ color:#fff; }}
+      body {{
+        background:
+          radial-gradient(circle at 14% 10%, rgba(255, 103, 119, .20), transparent 30%),
+          radial-gradient(circle at 90% 18%, rgba(255, 213, 218, .65), transparent 32%),
+          linear-gradient(180deg, #fff3f5 0%, #fff9fa 48%, #f6f8fc 100%) !important;
+      }}
+      main.wrap {{ max-width:1180px; }}
+      .stat-hero {{ position:relative; overflow:hidden; color:#fff; background:linear-gradient(135deg,#f51d37 0%, #ff4358 55%, #ff8791 100%); border:0; box-shadow:0 28px 62px rgba(245,29,55,.24); }}
+      .stat-hero:after {{ content:""; position:absolute; width:260px; height:260px; right:-90px; top:-120px; border-radius:999px; background:rgba(255,255,255,.18); }}
+      .stat-hero h1,.stat-hero p,.stat-actions {{ color:#fff; position:relative; z-index:1; }}
       .stat-actions {{ display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }}
-      .stat-link {{ display:inline-flex; padding:12px 16px; border-radius:16px; text-decoration:none; font-weight:900; color:#f51d37; background:#fff; }}
-      .stat-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }}
-      .stat-panel {{ background:#fff; border:1px solid #f0d7dc; border-radius:24px; padding:22px; box-shadow:0 18px 42px rgba(20,36,66,.08); margin-bottom:22px; }}
-      .stat-total {{ font-size:38px; color:#221f27; }}
-      .stat-filters {{ display:grid; grid-template-columns:1fr 1fr auto auto; gap:12px; align-items:end; }}
-      .stat-track {{ height:14px; border-radius:999px; background:#fff0f3; border:1px solid #ffe0e5; overflow:hidden; }}
-      .stat-track span {{ display:block; height:100%; background:linear-gradient(90deg,#f51d37,#ff8791); }}
-      @media(max-width:800px) {{ .stat-grid,.stat-filters {{ grid-template-columns:1fr; }} }}
+      .stat-link {{ display:inline-flex; align-items:center; justify-content:center; padding:12px 16px; border-radius:16px; text-decoration:none; font-weight:900; color:#f51d37; background:#fff; box-shadow:0 12px 26px rgba(43,42,49,.12); }}
+      .stat-grid {{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:20px; }}
+      .stat-card {{ background:#fff; border:1px solid #f0d7dc; border-radius:22px; padding:18px; box-shadow:0 16px 34px rgba(20,36,66,.07); }}
+      .stat-card small {{ display:block; color:#7d7680; font-weight:850; margin-bottom:8px; }}
+      .stat-card b {{ font-size:30px; color:#221f27; }}
+      .stat-panel {{ background:rgba(255,255,255,.90); border:1px solid rgba(240,215,220,.95); border-radius:28px; padding:22px; box-shadow:0 22px 55px rgba(20,36,66,.08); margin-bottom:22px; }}
+      .stat-filters-row {{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; }}
+      .stat-filter {{ padding:10px 14px; border-radius:999px; text-decoration:none; background:#fff; color:#382f36; font-weight:900; border:1px solid #f0d7dc; }}
+      .stat-filter.active {{ color:#fff; background:linear-gradient(135deg,#f51d37,#ff6475); box-shadow:0 10px 20px rgba(245,29,55,.22); }}
+      .date-filters {{ display:grid; grid-template-columns:1fr 1fr auto auto; gap:12px; align-items:end; }}
+      .clear-filter {{ display:inline-flex; align-items:center; justify-content:center; padding:10px 14px; border-radius:999px; text-decoration:none; font-weight:900; background:#fff; color:#f51d37; border:1px solid #ffd6dc; }}
+      .stat-table-wrap {{ overflow:auto; }}
+      .stat-track {{ min-width:180px; height:14px; border-radius:999px; background:#fff0f3; border:1px solid #ffe0e5; overflow:hidden; }}
+      .stat-track span {{ display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#f51d37,#ff8791); }}
+      .focus-number {{ font-size:42px; color:#f51d37; line-height:1; }}
+      table td, table th {{ vertical-align:top; }}
+      @media(max-width:1050px) {{ .stat-grid {{ grid-template-columns:repeat(2,1fr); }} }}
+      @media(max-width:650px) {{ .stat-grid,.date-filters {{ grid-template-columns:1fr; }} .stat-track {{ min-width:120px; }} }}
     </style>
+
     <div class='hero stat-hero'>
-      <h1>Estadísticas de condiciones</h1>
-      <p>Conteo de clientes sin app según la rutina seleccionada: melasma, acné, none u otras condiciones guardadas.</p>
+      <h1>Estadísticas por tipo de piel / condición</h1>
+      <p>Conteo agrupado únicamente por el campo “Tipo piel / condición”, con los mismos filtros de origen del dashboard.</p>
       <div class='stat-actions'>
         <a class='stat-link' href='/kbeauty-data/admin/dashboard'>Dashboard</a>
         <a class='stat-link' href='/kbeauty-data/admin'>Volver a admin</a>
       </div>
     </div>
 
+    <div class='stat-grid'>
+      <div class='stat-card'><small>Total análisis</small><b>{int(resumen.get('total') or 0)}</b></div>
+      <div class='stat-card'><small>Presenciales con app</small><b>{int(resumen.get('presencial_con_app') or 0)}</b></div>
+      <div class='stat-card'><small>Presenciales sin app</small><b>{int(resumen.get('presencial_sin_app') or 0)}</b></div>
+      <div class='stat-card'><small>Hechos en la app</small><b>{int(resumen.get('app_cliente') or 0)}</b></div>
+      <div class='stat-card'><small>Empleados con análisis</small><b>{int(resumen.get('empleados_con_analisis') or 0)}</b></div>
+    </div>
+
     <div class='stat-panel'>
       <h2>Filtros</h2>
-      <form class='stat-filters' method='get' action='/kbeauty-data/admin/estadisticas'>
-        <div><label>Desde</label><input type='date' name='fecha_desde' value='{escape(estadisticas.get('fecha_desde') or '')}'></div>
-        <div><label>Hasta</label><input type='date' name='fecha_hasta' value='{escape(estadisticas.get('fecha_hasta') or '')}'></div>
+      <div class='stat-filters-row'>{filtros_html}</div>
+      <form class='date-filters' method='get' action='/kbeauty-data/admin/estadisticas'>
+        <input type='hidden' name='filtro' value='{escape(filtro_actual)}'>
+        <div><label>Desde</label><input type='date' name='fecha_desde' value='{escape(fecha_desde_actual)}'></div>
+        <div><label>Hasta</label><input type='date' name='fecha_hasta' value='{escape(fecha_hasta_actual)}'></div>
         <button type='submit'>Aplicar</button>
         <a class='clear-filter' href='/kbeauty-data/admin/estadisticas'>Limpiar</a>
       </form>
     </div>
 
     <div class='stat-panel'>
-      <small>Total clientes/rutinas sin app</small><br>
-      <b class='stat-total'>{int(resumen.get('total') or 0)}</b>
+      <small>Registros visibles con el filtro actual</small><br>
+      <b class='focus-number'>{int(total_visible or 0)}</b>
     </div>
 
-    <div class='stat-grid'>
-      <div class='stat-panel'>
-        <h2>Por condición</h2>
-        <table><thead><tr><th>Condición</th><th>Cantidad</th><th>Distribución</th></tr></thead><tbody>{filas_condicion}</tbody></table>
-      </div>
-      <div class='stat-panel'>
-        <h2>Por tipo de piel</h2>
-        <table><thead><tr><th>Tipo de piel</th><th>Cantidad</th><th>Distribución</th></tr></thead><tbody>{filas_tipo}</tbody></table>
+    <div class='stat-panel'>
+      <h2>Tipo piel / condición</h2>
+      <p class='small'>Agrupación única para saber cuántos clientes caen en cada combinación, por ejemplo seca / melasma, grasa / acné o mixta / none.</p>
+      <div class='stat-table-wrap'>
+        <table>
+          <thead><tr><th>Tipo piel / condición</th><th>Cantidad</th><th>Distribución</th></tr></thead>
+          <tbody>{filas_tipo_condicion}</tbody>
+        </table>
       </div>
     </div>
     """

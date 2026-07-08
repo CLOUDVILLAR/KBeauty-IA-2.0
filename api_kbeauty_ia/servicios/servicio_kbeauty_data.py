@@ -913,76 +913,162 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
     }
 
 
-def obtener_estadisticas_condiciones_admin(fecha_desde="", fecha_hasta=""):
-    """Devuelve conteos por condicion/tipo de piel para analisis presenciales sin app.
+def obtener_estadisticas_condiciones_admin(filtro="todos", fecha_desde="", fecha_hasta=""):
+    """Devuelve conteos para la vista admin de estadisticas.
 
-    Por ahora la estadistica se basa en la rutina elegida en el flujo sin app,
-    guardada en analisis_presenciales_pdf.valores_extraidos.
+    La estadistica principal agrupa solo por la combinacion "Tipo piel / condicion".
+    El filtro de origen replica el dashboard: todos, presenciales con app,
+    presenciales sin app y hechos en la app.
     """
+    filtro = (filtro or "todos").strip()
+    if filtro not in {"todos", "presencial_con_app", "presencial_sin_app", "app_cliente"}:
+        filtro = "todos"
     fecha_desde = str(fecha_desde or "").strip()
     fecha_hasta = str(fecha_hasta or "").strip()
 
-    resumen = {"total": 0}
-    por_condicion = []
-    por_tipo_piel = []
+    def _condiciones_fecha(alias=""):
+        prefijo = f"{alias}." if alias else ""
+        condiciones = []
+        params = []
+        if fecha_desde:
+            condiciones.append(f"{prefijo}creado_en >= %s::date")
+            params.append(fecha_desde)
+        if fecha_hasta:
+            condiciones.append(f"{prefijo}creado_en < (%s::date + interval '1 day')")
+            params.append(fecha_hasta)
+        return condiciones, params
 
-    if not _tabla_existe_local("analisis_presenciales_pdf"):
-        return {
-            "fecha_desde": fecha_desde,
-            "fecha_hasta": fecha_hasta,
-            "resumen": resumen,
-            "por_condicion": por_condicion,
-            "por_tipo_piel": por_tipo_piel,
-        }
+    resumen = {
+        "total": 0,
+        "presencial_con_app": 0,
+        "presencial_sin_app": 0,
+        "app_cliente": 0,
+        "empleados_con_analisis": 0,
+    }
+    por_tipo_condicion = []
 
-    condiciones = ["valores_extraidos->>'flujo' = 'rutina_sin_app_pdf'"]
+    existe_presenciales = _tabla_existe_local("analisis_presenciales_pdf")
+    existe_app = _tabla_existe_local("analisis_piel")
+
+    if existe_presenciales:
+        condiciones_pres, params_pres = _condiciones_fecha()
+        where_pres = "WHERE " + " AND ".join(condiciones_pres) if condiciones_pres else ""
+        filas_pres = consultar_todos(
+            f"""
+            SELECT
+                CASE
+                    WHEN tipo = 'presencial_sin_app' THEN 'presencial_sin_app'
+                    ELSE 'presencial_con_app'
+                END AS tipo_dashboard,
+                COUNT(*)::int AS total
+            FROM analisis_presenciales_pdf
+            {where_pres}
+            GROUP BY 1
+            """,
+            tuple(params_pres),
+        ) or []
+        for fila in filas_pres:
+            clave = fila.get("tipo_dashboard")
+            if clave in resumen:
+                resumen[clave] = int(fila.get("total") or 0)
+
+        empleados = consultar_uno(
+            f"""
+            SELECT COUNT(DISTINCT COALESCE(
+                CAST(empleado_villar_id AS TEXT),
+                CAST(empleado_id AS TEXT),
+                CAST(usuario_id AS TEXT)
+            ))::int AS total
+            FROM analisis_presenciales_pdf
+            {where_pres}
+            """,
+            tuple(params_pres),
+        )
+        resumen["empleados_con_analisis"] = int((empleados or {}).get("total") or 0)
+
+    if existe_app:
+        condiciones_app, params_app = _condiciones_fecha()
+        where_app = "WHERE " + " AND ".join(condiciones_app) if condiciones_app else ""
+        total_app = consultar_uno(
+            f"SELECT COUNT(*)::int AS total FROM analisis_piel {where_app}",
+            tuple(params_app),
+        )
+        resumen["app_cliente"] = int((total_app or {}).get("total") or 0)
+
+    resumen["total"] = resumen["presencial_con_app"] + resumen["presencial_sin_app"] + resumen["app_cliente"]
+
+    consultas = []
     params = []
-    if fecha_desde:
-        condiciones.append("creado_en >= %s::date")
-        params.append(fecha_desde)
-    if fecha_hasta:
-        condiciones.append("creado_en < (%s::date + interval '1 day')")
-        params.append(fecha_hasta)
-    where_sql = "WHERE " + " AND ".join(condiciones)
+    incluir_presenciales = filtro in ("todos", "presencial_con_app", "presencial_sin_app")
+    incluir_app = filtro in ("todos", "app_cliente")
 
-    total = consultar_uno(
-        f"SELECT COUNT(*)::int AS total FROM analisis_presenciales_pdf {where_sql}",
-        tuple(params),
-    )
-    resumen["total"] = int((total or {}).get("total") or 0)
+    if incluir_presenciales and existe_presenciales:
+        condiciones, params_fecha = _condiciones_fecha()
+        params.extend(params_fecha)
+        if filtro == "presencial_sin_app":
+            condiciones.append("tipo = 'presencial_sin_app'")
+        elif filtro == "presencial_con_app":
+            condiciones.append("(tipo IS NULL OR tipo <> 'presencial_sin_app')")
+        where_sql = "WHERE " + " AND ".join(condiciones) if condiciones else ""
+        consultas.append(f"""
+            SELECT
+                CASE WHEN tipo = 'presencial_sin_app' THEN 'presencial_sin_app' ELSE 'presencial_con_app' END AS origen,
+                COALESCE(NULLIF(TRIM(COALESCE(
+                    valores_extraidos->>'tipo_piel',
+                    valores_extraidos->>'tipo_de_piel',
+                    valores_extraidos->>'piel'
+                )), ''), 'Sin tipo de piel') AS tipo_piel,
+                COALESCE(NULLIF(TRIM(COALESCE(
+                    valores_extraidos->>'condicion',
+                    valores_extraidos->>'condicion_principal',
+                    valores_extraidos->>'condicion_principal_detectada'
+                )), ''), 'Sin condicion') AS condicion
+            FROM analisis_presenciales_pdf
+            {where_sql}
+        """)
 
-    por_condicion = consultar_todos(
-        f"""
+    if incluir_app and existe_app:
+        condiciones_app_filtro, params_app_filtro = _condiciones_fecha()
+        params.extend(params_app_filtro)
+        where_app_filtro = "WHERE " + " AND ".join(condiciones_app_filtro) if condiciones_app_filtro else ""
+        consultas.append(f"""
+            SELECT
+                'app_cliente' AS origen,
+                COALESCE(NULLIF(TRIM(COALESCE(
+                    resultado_completo->>'tipo_piel',
+                    resultado_completo->>'tipo_de_piel'
+                )), ''), 'Sin tipo de piel') AS tipo_piel,
+                COALESCE(NULLIF(TRIM(COALESCE(
+                    resultado_completo->>'condicion_principal_detectada',
+                    resultado_completo->>'condicion',
+                    resultado_completo->>'condicion_principal'
+                )), ''), 'Sin condicion') AS condicion
+            FROM analisis_piel
+            {where_app_filtro}
+        """)
+
+    if consultas:
+        sql = f"""
         SELECT
-            COALESCE(NULLIF(TRIM(valores_extraidos->>'condicion'), ''), 'Sin condicion') AS condicion,
-            COUNT(*)::int AS total
-        FROM analisis_presenciales_pdf
-        {where_sql}
-        GROUP BY 1
-        ORDER BY total DESC, condicion ASC
-        """,
-        tuple(params),
-    ) or []
-
-    por_tipo_piel = consultar_todos(
-        f"""
-        SELECT
-            COALESCE(NULLIF(TRIM(valores_extraidos->>'tipo_piel'), ''), 'Sin tipo de piel') AS tipo_piel,
-            COUNT(*)::int AS total
-        FROM analisis_presenciales_pdf
-        {where_sql}
-        GROUP BY 1
-        ORDER BY total DESC, tipo_piel ASC
-        """,
-        tuple(params),
-    ) or []
+            tipo_piel,
+            condicion,
+            CONCAT(tipo_piel, ' / ', condicion) AS tipo_piel_condicion,
+            COUNT(*)::int AS total,
+            SUM(CASE WHEN origen = 'presencial_con_app' THEN 1 ELSE 0 END)::int AS presencial_con_app,
+            SUM(CASE WHEN origen = 'presencial_sin_app' THEN 1 ELSE 0 END)::int AS presencial_sin_app,
+            SUM(CASE WHEN origen = 'app_cliente' THEN 1 ELSE 0 END)::int AS app_cliente
+        FROM ({' UNION ALL '.join(consultas)}) AS datos
+        GROUP BY tipo_piel, condicion
+        ORDER BY total DESC, tipo_piel ASC, condicion ASC
+        """
+        por_tipo_condicion = consultar_todos(sql, tuple(params)) or []
 
     return {
+        "filtro": filtro,
         "fecha_desde": fecha_desde,
         "fecha_hasta": fecha_hasta,
         "resumen": resumen,
-        "por_condicion": por_condicion,
-        "por_tipo_piel": por_tipo_piel,
+        "por_tipo_condicion": por_tipo_condicion,
     }
 
 def obtener_pdf_presencial(analisis_id, usuario_actual):
