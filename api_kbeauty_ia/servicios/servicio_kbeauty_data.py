@@ -646,7 +646,6 @@ def guardar_registro_rutina_sin_app_presencial(empleado_usuario, pdf_bytes, arch
         nombre_archivo = f"{nombre_archivo}.pdf"
     nombre_seguro = f"sin_app_{uuid.uuid4()}.pdf"
     ruta = _directorio_pdfs() / nombre_seguro
-    ruta.write_bytes(pdf_bytes)
 
     metadata = {
         "origen": "presencial_sin_app",
@@ -663,6 +662,39 @@ def guardar_registro_rutina_sin_app_presencial(empleado_usuario, pdf_bytes, arch
     }
 
     columnas = _columnas_tabla("analisis_presenciales_pdf")
+
+    # Evita registros duplicados cuando el empleado presiona varias veces
+    # "Descargar PDF" para el mismo cliente/rutina en el mismo dia.
+    # No se borra historial antiguo: solo se impide insertar el duplicado operativo.
+    telefono_normalizado = "".join(ch for ch in str(cliente_telefono or "") if ch.isdigit())
+    rutina_indice_txt = "" if rutina_indice is None else str(rutina_indice)
+    rutina_nombre_txt = str(metadata.get("rutina_nombre") or "").strip()
+
+    existente = None
+    if telefono_normalizado:
+        existente = consultar_uno(
+            """
+            SELECT *
+            FROM analisis_presenciales_pdf
+            WHERE tipo = 'presencial_sin_app'
+              AND valores_extraidos->>'flujo' = 'rutina_sin_app_pdf'
+              AND regexp_replace(COALESCE(valores_extraidos->>'cliente_telefono', ''), '[^0-9]', '', 'g') = %s
+              AND (
+                    COALESCE(valores_extraidos->>'rutina_indice', '') = %s
+                    OR COALESCE(valores_extraidos->>'rutina_nombre', '') = %s
+                  )
+              AND creado_en >= CURRENT_DATE
+              AND creado_en < CURRENT_DATE + interval '1 day'
+            ORDER BY creado_en DESC
+            LIMIT 1
+            """,
+            (telefono_normalizado, rutina_indice_txt, rutina_nombre_txt),
+        )
+    if existente:
+        return existente
+
+    ruta.write_bytes(pdf_bytes)
+
     datos = {
         "usuario_id": empleado_local["id"],
         "empleado_id": empleado_local["id"],
