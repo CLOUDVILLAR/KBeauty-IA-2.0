@@ -29,6 +29,7 @@ from servicios.servicio_kbeauty_data import (
     quitar_rol_a_villar_id,
     obtener_cliente_kdata,
     obtener_dashboard_analisis_admin,
+    obtener_estadisticas_condiciones_admin,
     usuario_desde_token_web,
     usuario_tiene_rol,
 )
@@ -735,11 +736,13 @@ def vista_dashboard_admin(
           <td><b>{escape(r.get('cliente_nombre') or 'Cliente')}</b><br><span class='small'>{escape(r.get('cliente_telefono') or '-')}</span></td>
           <td><span class='dash-badge {escape(str(r.get('tipo') or ''))}'>{escape(r.get('etiqueta') or r.get('tipo') or '')}</span></td>
           <td>{escape(fmt_fecha(r.get('creado_en')))}</td>
+          <td><b>{escape(r.get('tipo_piel_seleccionada') or '-')}</b><br><span class='small'>{escape(r.get('condicion_seleccionada') or '')}</span></td>
+          <td>{escape(r.get('rutina_seleccionada') or '-')}</td>
           <td><b>{escape(r.get('empleado_nombre') or 'Cliente app')}</b><br><span class='small'>{escape(str(r.get('empleado_ref') or ''))}</span></td>
           <td>{escape(r.get('estado_procesamiento') or '')}</td>
         </tr>
         """ for r in dashboard.get("recientes", [])
-    ]) or "<tr><td colspan='5' class='small'>No hay registros para este filtro.</td></tr>"
+    ]) or "<tr><td colspan='7' class='small'>No hay registros para este filtro.</td></tr>"
 
     contenido = f"""
     <style>
@@ -788,6 +791,7 @@ def vista_dashboard_admin(
       <div class='dash-top-actions'>
         <a class='dash-link' href='/kbeauty-data/admin'>Volver a admin</a>
         <a class='dash-link' href='/kbeauty-data/empleados'>Vista empleados</a>
+        <a class='dash-link' href='/kbeauty-data/admin/estadisticas'>Estadísticas</a>
       </div>
     </div>
 
@@ -835,9 +839,9 @@ def vista_dashboard_admin(
 
     <div class='dash-panel'>
       <h2>Registros recientes</h2>
-      <p class='small'>Solo se muestra lo necesario: cliente, teléfono, fecha y empleado.</p>
+      <p class='small'>Incluye la rutina/tipo de piel elegido en el flujo sin app cuando está disponible.</p>
       <table>
-        <thead><tr><th>Cliente</th><th>Tipo</th><th>Fecha</th><th>Empleado</th><th>Estado</th></tr></thead>
+        <thead><tr><th>Cliente</th><th>Tipo</th><th>Fecha</th><th>Tipo piel / condición</th><th>Rutina</th><th>Empleado</th><th>Estado</th></tr></thead>
         <tbody>{filas_recientes}</tbody>
       </table>
     </div>
@@ -851,6 +855,100 @@ def vista_dashboard_admin(
     </script>
     """
     return HTMLResponse(_html_base("Dashboard KBEAUTY-DATA", contenido, usuario))
+
+
+@router.get("/kbeauty-data/admin/estadisticas", response_class=HTMLResponse)
+def vista_estadisticas_admin(
+    request: Request,
+    fecha_desde: str = Query(""),
+    fecha_hasta: str = Query(""),
+):
+    usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/admin/estadisticas")
+    if redireccion:
+        return redireccion
+    exigir_admin(usuario)
+
+    estadisticas = obtener_estadisticas_condiciones_admin(
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+    )
+    resumen = estadisticas.get("resumen") or {}
+    total = max(int(resumen.get("total") or 0), 1)
+
+    def barra(valor):
+        return round((int(valor or 0) / total) * 100, 2)
+
+    filas_condicion = "".join([
+        f"""
+        <tr>
+          <td><b>{escape(f.get('condicion') or 'Sin condición')}</b></td>
+          <td>{int(f.get('total') or 0)}</td>
+          <td><div class='stat-track'><span style='width:{barra(f.get('total'))}%'></span></div></td>
+        </tr>
+        """ for f in estadisticas.get("por_condicion", [])
+    ]) or "<tr><td colspan='3' class='small'>No hay datos para este filtro.</td></tr>"
+
+    filas_tipo = "".join([
+        f"""
+        <tr>
+          <td><b>{escape(f.get('tipo_piel') or 'Sin tipo de piel')}</b></td>
+          <td>{int(f.get('total') or 0)}</td>
+          <td><div class='stat-track'><span style='width:{barra(f.get('total'))}%'></span></div></td>
+        </tr>
+        """ for f in estadisticas.get("por_tipo_piel", [])
+    ]) or "<tr><td colspan='3' class='small'>No hay datos para este filtro.</td></tr>"
+
+    contenido = f"""
+    <style>
+      main.wrap {{ max-width:1100px; }}
+      .stat-hero {{ color:#fff; background:linear-gradient(135deg,#f51d37,#ff8791); box-shadow:0 28px 62px rgba(245,29,55,.22); }}
+      .stat-hero h1,.stat-hero p {{ color:#fff; }}
+      .stat-actions {{ display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }}
+      .stat-link {{ display:inline-flex; padding:12px 16px; border-radius:16px; text-decoration:none; font-weight:900; color:#f51d37; background:#fff; }}
+      .stat-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }}
+      .stat-panel {{ background:#fff; border:1px solid #f0d7dc; border-radius:24px; padding:22px; box-shadow:0 18px 42px rgba(20,36,66,.08); margin-bottom:22px; }}
+      .stat-total {{ font-size:38px; color:#221f27; }}
+      .stat-filters {{ display:grid; grid-template-columns:1fr 1fr auto auto; gap:12px; align-items:end; }}
+      .stat-track {{ height:14px; border-radius:999px; background:#fff0f3; border:1px solid #ffe0e5; overflow:hidden; }}
+      .stat-track span {{ display:block; height:100%; background:linear-gradient(90deg,#f51d37,#ff8791); }}
+      @media(max-width:800px) {{ .stat-grid,.stat-filters {{ grid-template-columns:1fr; }} }}
+    </style>
+    <div class='hero stat-hero'>
+      <h1>Estadísticas de condiciones</h1>
+      <p>Conteo de clientes sin app según la rutina seleccionada: melasma, acné, none u otras condiciones guardadas.</p>
+      <div class='stat-actions'>
+        <a class='stat-link' href='/kbeauty-data/admin/dashboard'>Dashboard</a>
+        <a class='stat-link' href='/kbeauty-data/admin'>Volver a admin</a>
+      </div>
+    </div>
+
+    <div class='stat-panel'>
+      <h2>Filtros</h2>
+      <form class='stat-filters' method='get' action='/kbeauty-data/admin/estadisticas'>
+        <div><label>Desde</label><input type='date' name='fecha_desde' value='{escape(estadisticas.get('fecha_desde') or '')}'></div>
+        <div><label>Hasta</label><input type='date' name='fecha_hasta' value='{escape(estadisticas.get('fecha_hasta') or '')}'></div>
+        <button type='submit'>Aplicar</button>
+        <a class='clear-filter' href='/kbeauty-data/admin/estadisticas'>Limpiar</a>
+      </form>
+    </div>
+
+    <div class='stat-panel'>
+      <small>Total clientes/rutinas sin app</small><br>
+      <b class='stat-total'>{int(resumen.get('total') or 0)}</b>
+    </div>
+
+    <div class='stat-grid'>
+      <div class='stat-panel'>
+        <h2>Por condición</h2>
+        <table><thead><tr><th>Condición</th><th>Cantidad</th><th>Distribución</th></tr></thead><tbody>{filas_condicion}</tbody></table>
+      </div>
+      <div class='stat-panel'>
+        <h2>Por tipo de piel</h2>
+        <table><thead><tr><th>Tipo de piel</th><th>Cantidad</th><th>Distribución</th></tr></thead><tbody>{filas_tipo}</tbody></table>
+      </div>
+    </div>
+    """
+    return HTMLResponse(_html_base("Estadísticas KBEAUTY-DATA", contenido, usuario))
 
 @router.post("/kbeauty-data/admin/roles/crear")
 def accion_crear_rol(request: Request, codigo: str = Form(...), nombre: str = Form(...), descripcion: str = Form("")):

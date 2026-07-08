@@ -819,6 +819,9 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
                 villar_id::text AS villar_id,
                 COALESCE(valores_extraidos->>'cliente_nombre', valores_extraidos->>'nombre_cliente', valores_extraidos->>'cliente') AS cliente_nombre,
                 COALESCE(valores_extraidos->>'cliente_telefono', valores_extraidos->>'telefono_cliente', valores_extraidos->>'telefono') AS cliente_telefono,
+                COALESCE(valores_extraidos->>'tipo_piel', valores_extraidos->>'tipo_de_piel', valores_extraidos->>'piel') AS tipo_piel_seleccionada,
+                COALESCE(valores_extraidos->>'condicion', valores_extraidos->>'condicion_principal', valores_extraidos->>'condicion_principal_detectada') AS condicion_seleccionada,
+                COALESCE(valores_extraidos->>'rutina_nombre', valores_extraidos->>'nombre_rutina') AS rutina_seleccionada,
                 archivo_nombre,
                 valores_extraidos
             FROM analisis_presenciales_pdf
@@ -841,6 +844,9 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
                 villar_id::text AS villar_id,
                 NULL::text AS cliente_nombre,
                 NULL::text AS cliente_telefono,
+                COALESCE(resultado_completo->>'tipo_piel', resultado_completo->>'tipo_de_piel') AS tipo_piel_seleccionada,
+                COALESCE(resultado_completo->>'condicion_principal_detectada', resultado_completo->>'condicion', resultado_completo->>'condicion_principal') AS condicion_seleccionada,
+                NULL::text AS rutina_seleccionada,
                 NULL::text AS archivo_nombre,
                 resultado_completo AS valores_extraidos
             FROM analisis_piel
@@ -904,6 +910,79 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
         "por_empleado": por_empleado or [],
         "empleados_opciones": empleados_opciones or [],
         "recientes": recientes or [],
+    }
+
+
+def obtener_estadisticas_condiciones_admin(fecha_desde="", fecha_hasta=""):
+    """Devuelve conteos por condicion/tipo de piel para analisis presenciales sin app.
+
+    Por ahora la estadistica se basa en la rutina elegida en el flujo sin app,
+    guardada en analisis_presenciales_pdf.valores_extraidos.
+    """
+    fecha_desde = str(fecha_desde or "").strip()
+    fecha_hasta = str(fecha_hasta or "").strip()
+
+    resumen = {"total": 0}
+    por_condicion = []
+    por_tipo_piel = []
+
+    if not _tabla_existe_local("analisis_presenciales_pdf"):
+        return {
+            "fecha_desde": fecha_desde,
+            "fecha_hasta": fecha_hasta,
+            "resumen": resumen,
+            "por_condicion": por_condicion,
+            "por_tipo_piel": por_tipo_piel,
+        }
+
+    condiciones = ["valores_extraidos->>'flujo' = 'rutina_sin_app_pdf'"]
+    params = []
+    if fecha_desde:
+        condiciones.append("creado_en >= %s::date")
+        params.append(fecha_desde)
+    if fecha_hasta:
+        condiciones.append("creado_en < (%s::date + interval '1 day')")
+        params.append(fecha_hasta)
+    where_sql = "WHERE " + " AND ".join(condiciones)
+
+    total = consultar_uno(
+        f"SELECT COUNT(*)::int AS total FROM analisis_presenciales_pdf {where_sql}",
+        tuple(params),
+    )
+    resumen["total"] = int((total or {}).get("total") or 0)
+
+    por_condicion = consultar_todos(
+        f"""
+        SELECT
+            COALESCE(NULLIF(TRIM(valores_extraidos->>'condicion'), ''), 'Sin condicion') AS condicion,
+            COUNT(*)::int AS total
+        FROM analisis_presenciales_pdf
+        {where_sql}
+        GROUP BY 1
+        ORDER BY total DESC, condicion ASC
+        """,
+        tuple(params),
+    ) or []
+
+    por_tipo_piel = consultar_todos(
+        f"""
+        SELECT
+            COALESCE(NULLIF(TRIM(valores_extraidos->>'tipo_piel'), ''), 'Sin tipo de piel') AS tipo_piel,
+            COUNT(*)::int AS total
+        FROM analisis_presenciales_pdf
+        {where_sql}
+        GROUP BY 1
+        ORDER BY total DESC, tipo_piel ASC
+        """,
+        tuple(params),
+    ) or []
+
+    return {
+        "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
+        "resumen": resumen,
+        "por_condicion": por_condicion,
+        "por_tipo_piel": por_tipo_piel,
     }
 
 def obtener_pdf_presencial(analisis_id, usuario_actual):
