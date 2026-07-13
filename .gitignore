@@ -46,3 +46,6 @@ app.*.map.json
 
 api_kbeauty_ia/venv
 api_kbeauty_ia/.env
+
+# Llaves SSH (nunca commitear)
+*.pem

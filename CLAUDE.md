@@ -63,6 +63,20 @@ No state-management package — plain top-level functions and `StatefulWidget`s.
 - Other `servicios/*.dart` wrap specific endpoints; `pantallas/` are screens (`pantalla_*`), `widgets/` shared UI (`tarjeta_*`, `boton_principal`, etc.).
 - SSO uses the deep link `kbeauty://auth/callback` (via `app_links`); `servicio_api.dart` contains careful callback-dedup/lockout logic (`bloquearCallbacksTemporalmente`, `borrarSesionLocalYVerificar`) to prevent Android from reprocessing the last SSO link after logout — be cautious when touching session/logout code.
 
+## Producción / Despliegue
+
+La API corre en EC2 (`3.143.67.15`, Ubuntu, usuario `ubuntu`; llave SSH `VILLAR-DO-KEY.pem` en la raíz local, ignorada por git). El repo está clonado en `/opt/KBeauty-IA-2.0` y el servicio systemd `kbeauty.service` ejecuta uvicorn desde el venv del servidor en el puerto 8000 (expuesto directo, sin nginx). PostgreSQL es local en el mismo servidor (DB `kbeauty_ia_v2`); el `.env` de producción vive en `/opt/KBeauty-IA-2.0/api_kbeauty_ia/.env`.
+
+Flujo de deploy:
+
+```powershell
+git push                                                            # a main
+ssh -i VILLAR-DO-KEY.pem ubuntu@3.143.67.15 "cd /opt/KBeauty-IA-2.0 && git pull && sudo systemctl restart kbeauty"
+ssh -i VILLAR-DO-KEY.pem ubuntu@3.143.67.15 "curl -s localhost:8000/salud"
+```
+
+El reinicio solo es necesario si cambió código Python o datos que se cargan en memoria (p. ej. `datos/Completa_rutinas.json`). En el servidor, `almacenamiento/` contiene PDFs/imágenes de usuarios reales que aparecen como untracked — no tocarlos.
+
 ## Gotchas
 
 - `api_kbeauty_ia/README.md` references `sql/crear_tablas.sql`, but that file is not in the repo; the DB schema must be inferred from the SQL in `servicios/`.
