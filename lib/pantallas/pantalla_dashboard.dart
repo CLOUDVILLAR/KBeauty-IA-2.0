@@ -104,7 +104,7 @@ class PantallaDashboard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('KBeauty IA', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+                        Text('KBeauty Korean', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
                         Text('Tu piel, leída con inteligencia', style: TextStyle(color: KBeautyColors.textoSuave)),
                       ],
                     ),

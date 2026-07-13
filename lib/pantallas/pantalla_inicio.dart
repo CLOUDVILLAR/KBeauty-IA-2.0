@@ -60,11 +60,17 @@ class _PantallaInicioState extends State<PantallaInicio> {
           children: [
             _SplashLogo(),
             SizedBox(height: 18),
-            Text('KBeauty IA', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+            Text('KBeauty Korean', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
             SizedBox(height: 6),
             Text('Preparando tu experiencia', style: TextStyle(color: KBeautyColors.textoSuave, fontWeight: FontWeight.w700)),
             SizedBox(height: 22),
             SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 3)),
+            SizedBox(height: 18),
+            Text(
+              'Cargando... por favor no toques nada',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: KBeautyColors.textoSuave, fontWeight: FontWeight.w800),
+            ),
           ],
         ),
       ),

@@ -187,7 +187,7 @@ class ServicioAuth {
   static String _htmlRespuestaCallback(bool procesado) {
     final titulo = procesado ? 'Sesión iniciada' : 'No se pudo iniciar sesión';
     final mensaje = procesado
-        ? 'Ya puedes volver a KBeauty IA. Esta ventana se puede cerrar.'
+        ? 'Ya puedes volver a KBeauty Korean. Esta ventana se puede cerrar.'
         : 'Vuelve a la app e intenta nuevamente.';
     return '''<!doctype html>
 <html lang="es">

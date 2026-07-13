@@ -110,7 +110,7 @@ class _PantallaChatIaState extends State<PantallaChatIa> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat con KBeauty IA'),
+        title: const Text('Chat con KBeauty Korean'),
         actions: [
           IconButton(
             tooltip: 'Recargar',
@@ -265,7 +265,7 @@ class _BurbujaPensando extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(22),
         ),
-        child: const Text('KBeauty IA está pensando...', style: TextStyle(color: KBeautyColors.textoSuave, fontWeight: FontWeight.w800)),
+        child: const Text('KBeauty Korean está pensando...', style: TextStyle(color: KBeautyColors.textoSuave, fontWeight: FontWeight.w800)),
       ),
     );
   }

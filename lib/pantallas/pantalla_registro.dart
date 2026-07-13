@@ -79,7 +79,7 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'El registro se realiza exclusivamente en Villar.do. Al terminar, volverás automáticamente a KBeauty IA.',
+                      'El registro se realiza exclusivamente en Villar.do. Al terminar, volverás automáticamente a KBeauty Korean.',
                     ),
                     const SizedBox(height: 18),
                     botonPrincipal(

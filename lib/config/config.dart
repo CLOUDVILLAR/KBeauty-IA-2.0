@@ -12,6 +12,8 @@ const String villarDoAppKey =
     'villar_sk_dev_bdfdsBFgP0FTxulLvSWLAZ4JU6S9DDhq87-dw_l6PJGIXUo8';
 
 const Duration tiempoEsperaApi = Duration(seconds: 90);
+// La subida de 3 fotos + analisis con IA puede tardar mucho en internet lento.
+const Duration tiempoEsperaSubida = Duration(minutes: 4);
 const Duration tiempoEsperaSso = Duration(minutes: 15);
 
 const String nombreToken = 'token_kbeauty_villar_do';

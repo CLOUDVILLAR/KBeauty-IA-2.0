@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -127,6 +128,47 @@ Future<void> borrarSesionLocalYVerificar() async {
 
 Future<void> borrarToken() => borrarSesionLocal();
 
+bool _esErrorDeConexion(Object error) =>
+    error is SocketException ||
+    error is TimeoutException ||
+    error is HandshakeException ||
+    error is http.ClientException;
+
+Exception _convertirErrorDeConexion(Object error) {
+  if (error is TimeoutException) {
+    return Exception(
+      'La conexión está tardando demasiado. Tu internet parece lento o inestable; espera un momento e inténtalo de nuevo.',
+    );
+  }
+  if (_esErrorDeConexion(error)) {
+    return Exception(
+      'No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo.',
+    );
+  }
+  return error is Exception ? error : Exception(error.toString());
+}
+
+// Reintenta automaticamente ante fallos de red (sockets caidos, timeouts,
+// handshakes fallidos). Solo debe usarse con mas de un intento en peticiones
+// que se puedan repetir sin efectos secundarios (GET).
+Future<http.Response> _ejecutarConReintentos(
+  Future<http.Response> Function() peticion, {
+  int intentos = 1,
+}) async {
+  var intento = 0;
+  while (true) {
+    intento++;
+    try {
+      return await peticion();
+    } catch (error) {
+      if (!_esErrorDeConexion(error) || intento >= intentos) {
+        throw _convertirErrorDeConexion(error);
+      }
+      await Future.delayed(Duration(seconds: intento));
+    }
+  }
+}
+
 Map<String, String> crearCabeceras({bool json = true, String? token}) {
   final cabeceras = <String, String>{'Accept': 'application/json'};
   if (json) cabeceras['Content-Type'] = 'application/json';
@@ -151,6 +193,7 @@ Future<Map<String, dynamic>> enviarGet(String ruta, {bool requiereToken = true})
   final respuesta = await _enviarConRefreshSiHaceFalta(
     ejecutarPeticion,
     requiereToken: requiereToken,
+    intentosConexion: 3,
   );
   return procesarRespuesta(respuesta);
 }
@@ -182,13 +225,15 @@ Future<Map<String, dynamic>> enviarPostExterno(
   Map<String, dynamic> datos, {
   String? token,
 }) async {
-  final respuesta = await http
-      .post(
-        Uri.parse(url),
-        headers: crearCabeceras(token: token),
-        body: jsonEncode(datos),
-      )
-      .timeout(tiempoEsperaApi);
+  final respuesta = await _ejecutarConReintentos(
+    () => http
+        .post(
+          Uri.parse(url),
+          headers: crearCabeceras(token: token),
+          body: jsonEncode(datos),
+        )
+        .timeout(tiempoEsperaApi),
+  );
   return procesarRespuesta(respuesta);
 }
 
@@ -224,7 +269,7 @@ Future<Map<String, dynamic>> enviarTresImagenes(
     solicitud.files.add(await http.MultipartFile.fromPath('lado_izquierdo', ladoIzquierdo.path));
     solicitud.files.add(await http.MultipartFile.fromPath('lado_derecho', ladoDerecho.path));
 
-    final enviada = await solicitud.send().timeout(tiempoEsperaApi);
+    final enviada = await solicitud.send().timeout(tiempoEsperaSubida);
     return http.Response.fromStream(enviada);
   }
 
@@ -238,9 +283,13 @@ Future<Map<String, dynamic>> enviarTresImagenes(
 Future<http.Response> _enviarConRefreshSiHaceFalta(
   Future<http.Response> Function(String? token) ejecutarPeticion, {
   required bool requiereToken,
+  int intentosConexion = 1,
 }) async {
   String? token = requiereToken ? await obtenerToken() : null;
-  var respuesta = await ejecutarPeticion(token);
+  var respuesta = await _ejecutarConReintentos(
+    () => ejecutarPeticion(token),
+    intentos: intentosConexion,
+  );
 
   if (!requiereToken || respuesta.statusCode != 401) {
     return respuesta;
@@ -253,7 +302,10 @@ Future<http.Response> _enviarConRefreshSiHaceFalta(
   }
 
   token = await obtenerToken();
-  respuesta = await ejecutarPeticion(token);
+  respuesta = await _ejecutarConReintentos(
+    () => ejecutarPeticion(token),
+    intentos: intentosConexion,
+  );
 
   if (respuesta.statusCode == 401) {
     await borrarSesionLocalYVerificar();

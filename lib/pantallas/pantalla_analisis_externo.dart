@@ -119,7 +119,7 @@ class _PantallaAnalisisExternoState extends State<PantallaAnalisisExterno> {
                       ),
                       SizedBox(height: 8),
                       Text(
-                        'Sube el PDF de la maquina facial. KBeauty IA lo interpreta y crea un resultado separado de tu evolucion principal.',
+                        'Sube el PDF de la maquina facial. KBeauty Korean lo interpreta y crea un resultado separado de tu evolucion principal.',
                         style: TextStyle(color: Colors.white, height: 1.35, fontWeight: FontWeight.w600),
                       ),
                     ],

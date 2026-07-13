@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../servicios/servicio_analisis.dart';
 import '../utilidades/responsivo.dart';
 import '../widgets/boton_principal.dart';
+import '../widgets/guia_posicion_cara.dart';
 import '../widgets/mensaje_estado.dart';
 import '../widgets/tarjeta_base.dart';
 import 'pantalla_resultado_analisis.dart';
@@ -66,7 +67,12 @@ class _PantallaAnalisisState extends State<PantallaAnalisis> {
       for (var indice = 0; indice < fotos.length; indice++) {
         if (!mounted) return;
 
-        mostrarMensaje(context, 'Toma la foto: ${titulosFotos[indice]}');
+        final continuar = await mostrarGuiaPosicionCara(context, indice);
+        if (!continuar) {
+          if (mounted) mostrarMensaje(context, 'Secuencia cancelada. Puedes volver a intentarlo.');
+          return;
+        }
+        if (!mounted) return;
 
         final imagen = await selectorImagen.pickImage(
           source: ImageSource.camera,
@@ -153,6 +159,9 @@ class _PantallaAnalisisState extends State<PantallaAnalisis> {
     if (seleccionando || analizando) return;
 
     if (metodo == 'tomar') {
+      final continuar = await mostrarGuiaPosicionCara(context, indice);
+      if (!continuar || !mounted) return;
+
       final imagen = await selectorImagen.pickImage(
         source: ImageSource.camera,
         imageQuality: 90,

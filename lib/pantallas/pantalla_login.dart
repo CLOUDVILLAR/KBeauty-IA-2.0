@@ -22,6 +22,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
   bool cargandoRegistro = false;
   bool cargandoRecuperar = false;
   bool cancelando = false;
+  bool procesandoSesion = false;
 
   bool get esperandoVillarDo => cargandoLogin || cargandoRegistro;
 
@@ -49,6 +50,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
   }
 
   Future<void> _continuarLuegoDeVillarDo() async {
+    if (mounted) setState(() => procesandoSesion = true);
     try {
       final estado = await obtenerEstadoPerfil();
       final completado = estado['formulario_completado'] == true || estado['completado'] == true;
@@ -64,6 +66,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
       setState(() {
         cargandoLogin = false;
         cargandoRegistro = false;
+        procesandoSesion = false;
       });
       mostrarMensaje(context, error.toString().replaceFirst('Exception: ', ''));
     }
@@ -133,10 +136,52 @@ class _PantallaLoginState extends State<PantallaLogin> {
     }
   }
 
+  Widget _overlayCargandoSesion() {
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black54,
+        alignment: Alignment.center,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: tarjetaBase(
+            hijo: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(width: 34, height: 34, child: CircularProgressIndicator(strokeWidth: 3)),
+                SizedBox(height: 16),
+                Text(
+                  'Cargando tu sesión...',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Por favor no toques nada, esto puede tardar unos segundos.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: KBeautyColors.textoSuave, fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
+      body: Stack(
+        children: [
+          _construirContenido(context),
+          if (procesandoSesion) _overlayCargandoSesion(),
+        ],
+      ),
+    );
+  }
+
+  Widget _construirContenido(BuildContext context) {
+    return SafeArea(
         child: centrarContenido(
           context,
           ListView(
@@ -160,7 +205,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
                     ),
                     const SizedBox(height: 22),
                     const Text(
-                      'KBeauty IA',
+                      'KBeauty Korean',
                       style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.white),
                     ),
                     const SizedBox(height: 8),
@@ -257,7 +302,6 @@ class _PantallaLoginState extends State<PantallaLogin> {
             ],
           ),
         ),
-      ),
     );
   }
 }

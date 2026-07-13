@@ -14,7 +14,7 @@ class KBeautyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'KBeauty IA',
+      title: 'KBeauty Korean',
       debugShowCheckedModeBanner: false,
       theme: crearTemaApp(),
       home: const PantallaInicio(),
