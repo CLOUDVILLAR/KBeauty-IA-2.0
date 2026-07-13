@@ -3,14 +3,13 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
-import '../servicios/servicio_analisis.dart';
 import '../utilidades/responsivo.dart';
 import '../widgets/boton_principal.dart';
 import '../widgets/guia_posicion_cara.dart';
 import '../widgets/mensaje_estado.dart';
 import '../widgets/tarjeta_base.dart';
+import 'pantalla_analizando.dart';
 import 'pantalla_camara_guiada.dart';
-import 'pantalla_resultado_analisis.dart';
 
 class PantallaAnalisis extends StatefulWidget {
   const PantallaAnalisis({super.key});
@@ -23,7 +22,6 @@ class _PantallaAnalisisState extends State<PantallaAnalisis> {
   final List<File?> fotos = [null, null, null];
 
   String metodo = '';
-  bool analizando = false;
   bool seleccionando = false;
 
   List<String> get titulosFotos => [
@@ -58,7 +56,7 @@ class _PantallaAnalisisState extends State<PantallaAnalisis> {
   }
 
   Future<void> tomarFotosEnSecuencia() async {
-    if (seleccionando || analizando) return;
+    if (seleccionando) return;
 
     setState(() => seleccionando = true);
 
@@ -113,7 +111,7 @@ class _PantallaAnalisisState extends State<PantallaAnalisis> {
       );
 
   Future<void> subirFotosDesdeArchivos() async {
-    if (seleccionando || analizando) return;
+    if (seleccionando) return;
 
     setState(() => seleccionando = true);
 
@@ -153,7 +151,7 @@ class _PantallaAnalisisState extends State<PantallaAnalisis> {
   }
 
   Future<void> cambiarFotoIndividual(int indice) async {
-    if (seleccionando || analizando) return;
+    if (seleccionando) return;
 
     if (metodo == 'tomar') {
       final continuar = await mostrarGuiaPosicionCara(context, indice);
@@ -185,31 +183,20 @@ class _PantallaAnalisisState extends State<PantallaAnalisis> {
       return;
     }
 
-    setState(() => analizando = true);
-
-    try {
-      final resultado = await enviarTresFotosAnalisis(
-        frente: fotos[0]!,
-        ladoIzquierdo: fotos[1]!,
-        ladoDerecho: fotos[2]!,
-      );
-
-      if (!mounted) return;
-
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => PantallaResultadoAnalisis(resultado: resultado),
+    // La espera, los reintentos y la navegacion al resultado viven en la
+    // pantalla de analisis animada. Solo regresa aqui si la sesion expira.
+    final resultado = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PantallaAnalizando(
+          frente: fotos[0]!,
+          ladoIzquierdo: fotos[1]!,
+          ladoDerecho: fotos[2]!,
         ),
-      );
-    } catch (error) {
-      if (mounted) {
-        mostrarMensaje(
-          context,
-          error.toString().replaceFirst('Exception: ', ''),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => analizando = false);
+      ),
+    );
+
+    if (resultado is String && resultado.isNotEmpty && mounted) {
+      mostrarMensaje(context, resultado);
     }
   }
 
@@ -302,7 +289,7 @@ class _PantallaAnalisisState extends State<PantallaAnalisis> {
                 ),
               ),
               TextButton.icon(
-                onPressed: analizando || seleccionando ? null : () => seleccionarMetodo(''),
+                onPressed: seleccionando ? null : () => seleccionarMetodo(''),
                 icon: const Icon(Icons.swap_horiz),
                 label: const Text('Cambiar'),
               ),
@@ -338,7 +325,6 @@ class _PantallaAnalisisState extends State<PantallaAnalisis> {
             botonPrincipal(
               texto: 'Enviar fotos',
               icono: Icons.auto_awesome,
-              cargando: analizando,
               alPresionar: analizar,
             )
           else
@@ -349,7 +335,7 @@ class _PantallaAnalisisState extends State<PantallaAnalisis> {
             ),
           const SizedBox(height: 8),
           TextButton.icon(
-            onPressed: analizando || seleccionando ? null : limpiarFotos,
+            onPressed: seleccionando ? null : limpiarFotos,
             icon: const Icon(Icons.delete_outline),
             label: const Text('Limpiar fotos'),
           ),
