@@ -937,18 +937,6 @@
 
       ],
       "día":[
-        {
-        "id_odoo": 22609,
-        "nombre_producto": "HEIMISH RX RETINOL BAKUCHIOL BOOSTER OIL",
-        "categoria": "tratamiento",
-        "subtipo": "facial_oil",
-        "uso": { "paso_rutina": "tratamiento" },
-        "frecuencia": "una noche si una noche no",
-        "descripcion_rutina": {
-          "noche": "Durante las primeras dos semanas de uso, aplicar una capa fina del aceite sobre el rostro y el cuello una vez cada dos días. A partir de la tercera semana, aplicar una vez al día durante la rutina nocturna de cuidado de la piel. Puede utilizarse solo o mezclado con el sérum o la crema."
-        }
-      },
-
       {
   "id_odoo": 22517,
   "nombre_producto": "TOCOBO MULTI CERAMIDE CREAM 50ml",
