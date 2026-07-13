@@ -137,22 +137,26 @@ class _PantallaCamaraGuiadaState extends State<PantallaCamaraGuiada>
       return const Center(child: CircularProgressIndicator(color: Colors.white));
     }
 
-    // La vista previa llega en horizontal: se invierte para retrato y se
-    // recorta para llenar la pantalla completa.
-    final tamanoPreview = actual.value.previewSize!;
-    return LayoutBuilder(
-      builder: (_, restricciones) => ClipRect(
-        child: OverflowBox(
-          maxWidth: double.infinity,
-          maxHeight: double.infinity,
-          child: FittedBox(
-            fit: BoxFit.cover,
-            child: SizedBox(
-              width: tamanoPreview.height,
-              height: tamanoPreview.width,
-              child: CameraPreview(actual),
+    // La vista previa se muestra completa, a su proporcion real (sin recorte
+    // ni zoom). La silueta se dibuja sobre esa misma area, asi coincide con
+    // lo que realmente captura la foto.
+    return Center(
+      child: AspectRatio(
+        aspectRatio: 1 / actual.value.aspectRatio,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CameraPreview(actual),
+            IgnorePointer(
+              child: CustomPaint(
+                painter: PintorSiluetaCara(
+                  indice: widget.indice,
+                  color: const Color(0xFFE53935),
+                  grosor: 3.5,
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -172,17 +176,6 @@ class _PantallaCamaraGuiadaState extends State<PantallaCamaraGuiada>
           fit: StackFit.expand,
           children: [
             _vistaCamara(),
-            // Silueta guia en rojo sobre la camara en vivo.
-            if (listo)
-              IgnorePointer(
-                child: CustomPaint(
-                  painter: PintorSiluetaCara(
-                    indice: widget.indice,
-                    color: const Color(0xFFE53935),
-                    grosor: 3.5,
-                  ),
-                ),
-              ),
             // Barra superior: cerrar + titulo.
             Positioned(
               top: 0,
