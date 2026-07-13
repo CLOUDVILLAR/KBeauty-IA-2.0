@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../servicios/servicio_analisis.dart';
 import '../utilidades/responsivo.dart';
@@ -10,6 +9,7 @@ import '../widgets/boton_principal.dart';
 import '../widgets/guia_posicion_cara.dart';
 import '../widgets/mensaje_estado.dart';
 import '../widgets/tarjeta_base.dart';
+import 'pantalla_camara_guiada.dart';
 import 'pantalla_resultado_analisis.dart';
 
 class PantallaAnalisis extends StatefulWidget {
@@ -20,7 +20,6 @@ class PantallaAnalisis extends StatefulWidget {
 }
 
 class _PantallaAnalisisState extends State<PantallaAnalisis> {
-  final selectorImagen = ImagePicker();
   final List<File?> fotos = [null, null, null];
 
   String metodo = '';
@@ -74,19 +73,17 @@ class _PantallaAnalisisState extends State<PantallaAnalisis> {
         }
         if (!mounted) return;
 
-        final imagen = await selectorImagen.pickImage(
-          source: ImageSource.camera,
-          imageQuality: 90,
-          maxWidth: 2200,
+        final File? imagen = await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => PantallaCamaraGuiada(indice: indice)),
         );
 
         if (imagen == null) {
-          mostrarMensaje(context, 'Secuencia cancelada. Puedes volver a intentarlo.');
+          if (mounted) mostrarMensaje(context, 'Secuencia cancelada. Puedes volver a intentarlo.');
           return;
         }
 
         if (!mounted) return;
-        setState(() => fotos[indice] = File(imagen.path));
+        setState(() => fotos[indice] = imagen);
       }
 
       if (mounted) mostrarMensaje(context, 'Fotos listas para enviar.');
@@ -162,14 +159,12 @@ class _PantallaAnalisisState extends State<PantallaAnalisis> {
       final continuar = await mostrarGuiaPosicionCara(context, indice);
       if (!continuar || !mounted) return;
 
-      final imagen = await selectorImagen.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 90,
-        maxWidth: 2200,
+      final File? imagen = await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => PantallaCamaraGuiada(indice: indice)),
       );
 
       if (imagen != null && mounted) {
-        setState(() => fotos[indice] = File(imagen.path));
+        setState(() => fotos[indice] = imagen);
       }
       return;
     }

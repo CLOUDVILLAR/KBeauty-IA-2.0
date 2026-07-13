@@ -12,6 +12,7 @@ dependencies:
   cupertino_icons: any
   http: any
   image_picker: any
+  camera: any
   file_selector: any
   flutter_secure_storage: any
   intl: any
