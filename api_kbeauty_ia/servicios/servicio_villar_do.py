@@ -95,9 +95,14 @@ def obtener_me_villar_do(token):
 def resolver_cliente_villar_do(nombre, apellido, telefono):
     """Crea o recupera un villar_id para un cliente sin app (sin correo),
     igual que hace turnos.villar. Requiere el scope clientes.resolver
-    en la API key de KBeauty en Villar.do."""
+    en la API key de KBeauty en Villar.do.
+
+    forzar_creacion=True porque el telefono ya es unico en Villar.do (no se
+    puede duplicar) -- si el nombre se parece al de otro cliente pero el
+    telefono es distinto, son personas distintas, no hay riesgo real en
+    crear el villar_id igual."""
     return llamar_villar_do(
         "POST",
         "/api/clientes/resolver",
-        json={"nombre": nombre, "apellido": apellido, "telefono": telefono},
+        json={"nombre": nombre, "apellido": apellido, "telefono": telefono, "forzar_creacion": True},
     )
