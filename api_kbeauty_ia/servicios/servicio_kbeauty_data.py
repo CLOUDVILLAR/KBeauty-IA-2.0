@@ -629,11 +629,14 @@ def _obtener_usuario_empleado_local(empleado_usuario):
 
 
 def _partir_nombre_completo(nombre_completo):
+    """Separa un nombre completo en (nombre, apellido). Si solo viene una
+    palabra, el apellido queda vacio -- no se duplica el nombre (Villar.do
+    ya no exige apellido)."""
     partes = (nombre_completo or "").strip().split(None, 1)
     if not partes:
         return "", ""
     if len(partes) == 1:
-        return partes[0], partes[0]
+        return partes[0], ""
     return partes[0], partes[1]
 
 
