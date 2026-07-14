@@ -30,6 +30,7 @@ from servicios.servicio_kbeauty_data import (
     obtener_cliente_kdata,
     obtener_dashboard_analisis_admin,
     obtener_estadisticas_condiciones_admin,
+    sincronizar_cliente_sin_app_con_odoo,
     usuario_desde_token_web,
     usuario_tiene_rol,
 )
@@ -1961,6 +1962,9 @@ async def descargar_rutina_sin_app_pdf(
         rutina,
         rutina_indice=rutina_indice,
     )
+    # De fondo, sin que el empleado tenga que hacer nada: crea/vincula al
+    # cliente en Odoo (por telefono) y ancla este PDF en su RX facial.
+    sincronizar_cliente_sin_app_con_odoo(nombre, telefono, pdf)
     return Response(
         content=pdf,
         media_type="application/pdf",

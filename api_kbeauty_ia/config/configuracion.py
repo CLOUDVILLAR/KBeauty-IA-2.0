@@ -68,6 +68,15 @@ ODOO_USER = obtener_variable("ODOO_USER", "")
 ODOO_PASSWORD = obtener_variable("ODOO_PASSWORD", "")
 ODOO_ACTIVO = obtener_booleano("ODOO_ACTIVO", False)
 
+# Conexion SEPARADA de Odoo, solo para crear/vincular clientes (RX facial).
+# Temporal: mientras se prueba, esto apunta a la Odoo de staging aunque
+# ODOO_URL/ODOO_DB de arriba (productos/stock) sigan en la Odoo real.
+ODOO_CLIENTES_URL = obtener_variable("ODOO_CLIENTES_URL", "")
+ODOO_CLIENTES_DB = obtener_variable("ODOO_CLIENTES_DB", "")
+ODOO_CLIENTES_USER = obtener_variable("ODOO_CLIENTES_USER", "")
+ODOO_CLIENTES_PASSWORD = obtener_variable("ODOO_CLIENTES_PASSWORD", "")
+ODOO_CLIENTES_ACTIVO = obtener_booleano("ODOO_CLIENTES_ACTIVO", False)
+
 RUTA_RUTINAS = obtener_variable("RUTA_RUTINAS", "datos/Completa_rutinas.json")
 RUTA_IMAGENES = obtener_variable("RUTA_IMAGENES", "")
 CORS_ORIGENES = obtener_lista("CORS_ORIGENES", ["*"])
@@ -97,6 +106,11 @@ def obtener_configuracion():
         "odoo_user": ODOO_USER,
         "odoo_password": ODOO_PASSWORD,
         "odoo_activo": ODOO_ACTIVO,
+        "odoo_clientes_url": ODOO_CLIENTES_URL,
+        "odoo_clientes_db": ODOO_CLIENTES_DB,
+        "odoo_clientes_user": ODOO_CLIENTES_USER,
+        "odoo_clientes_password": ODOO_CLIENTES_PASSWORD,
+        "odoo_clientes_activo": ODOO_CLIENTES_ACTIVO,
         "ruta_rutinas": RUTA_RUTINAS,
         "ruta_imagenes": RUTA_IMAGENES,
     }

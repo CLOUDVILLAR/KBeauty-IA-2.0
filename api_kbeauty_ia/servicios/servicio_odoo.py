@@ -1,4 +1,8 @@
+import base64
+import re
 import xmlrpc.client
+from datetime import date
+
 from config.configuracion import obtener_configuracion
 
 
@@ -110,3 +114,155 @@ def agregar_ubicaciones_a_productos(productos):
         copia["odoo_activo"] = odoo_esta_configurado()
         productos_enriquecidos.append(copia)
     return productos_enriquecidos
+
+
+# =========================================================
+# CONEXION SEPARADA: crear/vincular clientes y anclar examenes
+# de RX facial. Temporal: mientras se prueba, esta conexion
+# apunta a la Odoo de staging aunque la de arriba (productos)
+# siga en la Odoo real. Ver ODOO_CLIENTES_* en configuracion.py.
+# =========================================================
+
+class InfraOdooClientesError(Exception):
+    pass
+
+
+def _solo_digitos(valor):
+    if not valor:
+        return None
+    digitos = re.sub(r"\D+", "", valor)
+    return digitos or None
+
+
+def odoo_clientes_esta_configurado():
+    configuracion = obtener_configuracion()
+    return bool(
+        configuracion.get("odoo_clientes_activo")
+        and configuracion.get("odoo_clientes_url")
+        and configuracion.get("odoo_clientes_db")
+        and configuracion.get("odoo_clientes_user")
+        and configuracion.get("odoo_clientes_password")
+    )
+
+
+def conectar_odoo_clientes():
+    configuracion = obtener_configuracion()
+    if not odoo_clientes_esta_configurado():
+        raise InfraOdooClientesError("La conexion de Odoo para clientes no esta configurada (ODOO_CLIENTES_*)")
+    comun = xmlrpc.client.ServerProxy(f"{configuracion['odoo_clientes_url']}/xmlrpc/2/common")
+    uid = comun.authenticate(
+        configuracion["odoo_clientes_db"],
+        configuracion["odoo_clientes_user"],
+        configuracion["odoo_clientes_password"],
+        {},
+    )
+    if not uid:
+        raise InfraOdooClientesError("Odoo (clientes) rechazo la autenticacion")
+    modelos = xmlrpc.client.ServerProxy(f"{configuracion['odoo_clientes_url']}/xmlrpc/2/object")
+    return {"configuracion": configuracion, "uid": uid, "modelos": modelos}
+
+
+def ejecutar_odoo_clientes(modelo, metodo, argumentos=None, opciones=None):
+    conexion = conectar_odoo_clientes()
+    configuracion = conexion["configuracion"]
+    try:
+        return conexion["modelos"].execute_kw(
+            configuracion["odoo_clientes_db"],
+            conexion["uid"],
+            configuracion["odoo_clientes_password"],
+            modelo,
+            metodo,
+            argumentos or [],
+            opciones or {},
+        )
+    except xmlrpc.client.Fault as error:
+        raise InfraOdooClientesError(f"Odoo Fault ({modelo}.{metodo}): {error.faultString}")
+
+
+def buscar_partner_clientes_por_telefono(telefono):
+    digitos = _solo_digitos(telefono)
+    if not digitos:
+        return None
+
+    crudo = (telefono or "").strip()
+    variantes = {crudo, digitos, f"+{digitos}"}
+    if len(digitos) >= 10:
+        variantes.add(digitos[-10:])
+    if len(digitos) >= 7:
+        variantes.add(digitos[-7:])
+    if len(digitos) >= 4:
+        variantes.add(digitos[-4:])
+    variantes.discard("")
+
+    candidatos_por_id = {}
+    for termino in variantes:
+        encontrados = ejecutar_odoo_clientes(
+            "res.partner", "search_read",
+            [["|", ["phone", "ilike", termino], ["mobile", "ilike", termino]]],
+            {"fields": ["id", "name", "phone", "mobile", "villar_id"], "limit": 25},
+        ) or []
+        for partner in encontrados:
+            candidatos_por_id[partner["id"]] = partner
+
+    exactos = [
+        p for p in candidatos_por_id.values()
+        if _solo_digitos(p.get("phone")) == digitos or _solo_digitos(p.get("mobile")) == digitos
+    ]
+    # OJO: nunca devolver "el primero que aparecio" -- las variantes de
+    # busqueda (ultimos 4/7/10 digitos) son solo para traer candidatos, no
+    # una confirmacion. Sin match exacto por digitos completos, no hay
+    # match: mejor crear un cliente nuevo que vincular al equivocado.
+    return exactos[0] if exactos else None
+
+
+def crear_partner_clientes(nombre, apellido, telefono):
+    nombre_completo = f"{(nombre or '').strip()} {(apellido or '').strip()}".strip() or "Cliente KBeauty"
+    vals = {"name": nombre_completo}
+    if telefono:
+        vals["phone"] = telefono
+        vals["mobile"] = telefono
+    partner_id = ejecutar_odoo_clientes("res.partner", "create", [vals])
+    return {"id": int(partner_id), **vals}
+
+
+def escribir_villar_id_clientes(partner_id, villar_id):
+    ejecutar_odoo_clientes("res.partner", "write", [[int(partner_id)], {"villar_id": str(villar_id)}])
+
+
+def buscar_o_crear_partner_clientes(nombre, apellido, telefono, villar_id):
+    """Busca por telefono; si existe, le escribe el villar_id (sin duplicar).
+    Si no existe, crea el contacto ya con su villar_id."""
+    partner = buscar_partner_clientes_por_telefono(telefono)
+    if not partner:
+        partner = crear_partner_clientes(nombre, apellido, telefono)
+    escribir_villar_id_clientes(partner["id"], villar_id)
+    return partner
+
+
+def crear_examen_rx_facial(partner_id, pdf_bytes):
+    """Crea un registro k_beauty.exam (RX facial) con el PDF adjunto."""
+    if not pdf_bytes:
+        raise InfraOdooClientesError("PDF vacio, no se puede anclar a RX facial")
+    valores = {
+        "partner_id": int(partner_id),
+        "date": date.today().isoformat(),
+        "exam": base64.b64encode(pdf_bytes).decode("ascii"),
+    }
+    return ejecutar_odoo_clientes("k_beauty.exam", "create", [valores])
+
+
+def sincronizar_cliente_pdf_rx_facial(nombre, apellido, telefono, villar_id, pdf_bytes):
+    """Best-effort: crea/vincula el cliente en Odoo y ancla el PDF en RX facial.
+
+    Nunca lanza excepciones -- no debe bloquear ni afectar la descarga del
+    PDF para el empleado si Odoo (clientes) esta caido o mal configurado.
+    """
+    try:
+        if not odoo_clientes_esta_configurado():
+            print("[Odoo clientes] conexion no configurada, se omite sync de RX facial")
+            return
+        partner = buscar_o_crear_partner_clientes(nombre, apellido, telefono, villar_id)
+        crear_examen_rx_facial(partner["id"], pdf_bytes)
+        print(f"[Odoo clientes] villar_id={villar_id} vinculado a partner id={partner['id']}, examen RX facial creado")
+    except Exception as error:
+        print(f"[Odoo clientes] error sincronizando villar_id={villar_id}: {error}")

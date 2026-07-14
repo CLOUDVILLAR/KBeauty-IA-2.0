@@ -17,7 +17,8 @@ from servicios.servicio_analisis_externo import (
 from servicios.servicio_openai import analizar_pdf_externo_piel
 from servicios.servicio_rutinas import obtener_resumen_rutinas
 from servicios.servicio_usuarios import asegurar_usuario_local, obtener_roles_usuario
-from servicios.servicio_villar_do import validar_token_villar_do
+from servicios.servicio_villar_do import validar_token_villar_do, resolver_cliente_villar_do
+from servicios.servicio_odoo import sincronizar_cliente_pdf_rx_facial
 from utilidades.respuestas import respuesta_error
 
 
@@ -625,6 +626,36 @@ def _obtener_usuario_empleado_local(empleado_usuario):
         if usuario:
             return usuario
     respuesta_error("No se pudo identificar el empleado en la base local", 401)
+
+
+def _partir_nombre_completo(nombre_completo):
+    partes = (nombre_completo or "").strip().split(None, 1)
+    if not partes:
+        return "", ""
+    if len(partes) == 1:
+        return partes[0], partes[0]
+    return partes[0], partes[1]
+
+
+def sincronizar_cliente_sin_app_con_odoo(cliente_nombre, cliente_telefono, pdf_bytes):
+    """Crea/recupera el villar_id del cliente sin app y ancla el PDF en RX facial.
+
+    Best-effort: nunca lanza excepciones -- no debe interrumpir la descarga
+    del PDF para el empleado si Villar.do u Odoo (clientes) fallan.
+    """
+    try:
+        nombre, apellido = _partir_nombre_completo(cliente_nombre)
+        if not nombre or not (cliente_telefono or "").strip():
+            print("[KBeauty sin_app] nombre/telefono vacio, se omite sync con Odoo")
+            return
+        resultado = resolver_cliente_villar_do(nombre, apellido, cliente_telefono)
+        villar_id = resultado.get("villar_id")
+        if not villar_id:
+            print(f"[KBeauty sin_app] Villar.do no devolvio villar_id: {resultado}")
+            return
+        sincronizar_cliente_pdf_rx_facial(nombre, apellido, cliente_telefono, villar_id, pdf_bytes)
+    except Exception as error:
+        print(f"[KBeauty sin_app] error sincronizando cliente sin app con Odoo: {error}")
 
 
 def guardar_registro_rutina_sin_app_presencial(empleado_usuario, pdf_bytes, archivo_nombre, cliente_nombre, cliente_telefono, rutina, rutina_indice=None):
