@@ -179,40 +179,51 @@ def ejecutar_odoo_clientes(modelo, metodo, argumentos=None, opciones=None):
         raise InfraOdooClientesError(f"Odoo Fault ({modelo}.{metodo}): {error.faultString}")
 
 
+def _buscar_por_termino_telefono_clientes(termino, digitos, limite):
+    encontrados = ejecutar_odoo_clientes(
+        "res.partner", "search_read",
+        [["|", ["phone", "ilike", termino], ["mobile", "ilike", termino]]],
+        {"fields": ["id", "name", "phone", "mobile", "villar_id"], "limit": limite},
+    ) or []
+    for partner in encontrados:
+        # Nunca devolver "el primero que aparecio" -- ilike solo acerca
+        # candidatos, la confirmacion real es que los digitos completos
+        # coincidan exacto.
+        if _solo_digitos(partner.get("phone")) == digitos or _solo_digitos(partner.get("mobile")) == digitos:
+            return partner
+    return None
+
+
 def buscar_partner_clientes_por_telefono(telefono):
     digitos = _solo_digitos(telefono)
     if not digitos:
         return None
 
     crudo = (telefono or "").strip()
-    variantes = {crudo, digitos, f"+{digitos}"}
+    # Terminos fuertes (numero completo): poca chance de colision.
+    fuertes = [t for t in {crudo, digitos, f"+{digitos}"} if t]
     if len(digitos) >= 10:
-        variantes.add(digitos[-10:])
+        fuertes.append(digitos[-10:])
+    for termino in fuertes:
+        resultado = _buscar_por_termino_telefono_clientes(termino, digitos, 50)
+        if resultado:
+            return resultado
+
+    # Terminos debiles (ultimos 4-7 digitos, para telefonos con guiones que
+    # cortan la busqueda por numero completo): mucha mas chance de colision
+    # (ej. "2020" puede matchear docenas de clientes reales), por eso hace
+    # falta un limite bastante mas alto antes de concluir que no hay match.
+    debiles = []
     if len(digitos) >= 7:
-        variantes.add(digitos[-7:])
+        debiles.append(digitos[-7:])
     if len(digitos) >= 4:
-        variantes.add(digitos[-4:])
-    variantes.discard("")
+        debiles.append(digitos[-4:])
+    for termino in debiles:
+        resultado = _buscar_por_termino_telefono_clientes(termino, digitos, 500)
+        if resultado:
+            return resultado
 
-    candidatos_por_id = {}
-    for termino in variantes:
-        encontrados = ejecutar_odoo_clientes(
-            "res.partner", "search_read",
-            [["|", ["phone", "ilike", termino], ["mobile", "ilike", termino]]],
-            {"fields": ["id", "name", "phone", "mobile", "villar_id"], "limit": 25},
-        ) or []
-        for partner in encontrados:
-            candidatos_por_id[partner["id"]] = partner
-
-    exactos = [
-        p for p in candidatos_por_id.values()
-        if _solo_digitos(p.get("phone")) == digitos or _solo_digitos(p.get("mobile")) == digitos
-    ]
-    # OJO: nunca devolver "el primero que aparecio" -- las variantes de
-    # busqueda (ultimos 4/7/10 digitos) son solo para traer candidatos, no
-    # una confirmacion. Sin match exacto por digitos completos, no hay
-    # match: mejor crear un cliente nuevo que vincular al equivocado.
-    return exactos[0] if exactos else None
+    return None
 
 
 def crear_partner_clientes(nombre, apellido, telefono):
