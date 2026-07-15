@@ -34,8 +34,9 @@ from servicios.servicio_kbeauty_data import (
     usuario_desde_token_web,
     usuario_tiene_rol,
 )
-from config.configuracion import VILLAR_DO_API_URL, VILLAR_DO_CLIENT_ID
+from config.configuracion import VILLAR_DO_API_URL, VILLAR_DO_CLIENT_ID, obtener_configuracion
 from servicios.servicio_rutinas import listar_rutinas
+from servicios.servicio_odoo import buscar_partners_clientes_por_nombre
 from servicios.servicio_usuarios import obtener_roles_usuario
 from utilidades.respuestas import respuesta_correcta, respuesta_error
 
@@ -378,6 +379,10 @@ def _html_base(titulo, contenido, usuario=None, mostrar_nav=True):
         <div class="right">{sesion}</div>
       </nav>
     """ if mostrar_nav else ""
+    es_staging = obtener_configuracion().get("app_entorno") == "staging"
+    banner_staging = """
+      <div class="banner-staging"><span class="banner-staging-icono">⚠</span> AMBIENTE DE PRUEBAS — STAGING</div>
+    """ if es_staging else ""
     return f"""
     <!doctype html>
     <html lang="es">
@@ -387,6 +392,16 @@ def _html_base(titulo, contenido, usuario=None, mostrar_nav=True):
       <title>{escape(titulo)}</title>
       <style>
         body {{ margin:0; font-family: Arial, sans-serif; background:#f3f6fb; color:#06142e; }}
+        .banner-staging{{
+          position:fixed; top:14px; left:14px; z-index:9999;
+          display:flex; align-items:center; gap:7px;
+          padding:8px 14px; border-radius:10px;
+          font-family:Arial,sans-serif; font-weight:800; font-size:12px; letter-spacing:.03em;
+          color:#ffcc00; background:#1a1a1a; border:2px solid #ffcc00;
+          box-shadow:0 6px 18px rgba(0,0,0,.35); pointer-events:none;
+          max-width:min(78vw, 320px); line-height:1.25;
+        }}
+        .banner-staging .banner-staging-icono{{ font-size:14px; }}
         nav {{ padding:14px 24px; background:#fff; box-shadow:0 1px 8px rgba(255,42,65,.08); display:flex; gap:18px; align-items:center; }}
         nav a {{ color:#06142e; font-weight:700; }}
         .right {{ margin-left:auto; display:flex; gap:12px; align-items:center; font-size:14px; }}
@@ -405,6 +420,7 @@ def _html_base(titulo, contenido, usuario=None, mostrar_nav=True):
       </style>
     </head>
     <body>
+      {banner_staging}
       {nav_html}
       <main class="wrap">{contenido}</main>
     </body>
@@ -1167,9 +1183,18 @@ def vista_empleados(request: Request):
       .pdf-maquina-box .small { display:block; margin-top:8px; color:#8a7f88; font-size:12px; font-weight:750; line-height:1.35; }
       .rutina-select { background:#fff; border:1px solid #ffe0e5; border-radius:22px; margin-top:10px; }
       .rutina-preview { margin-top:12px; padding:14px; border-radius:22px; background:#fff6f8; color:#6b626d; font-size:13px; font-weight:800; line-height:1.45; }
-      .cliente-sin-app-box { display:grid; gap:10px; margin:12px 0 6px; }
+      .cliente-sin-app-box { display:grid; gap:10px; margin:12px 0 6px; position:relative; }
       .cliente-sin-app-box label { margin-top:4px; color:#3a333b; }
       .cliente-sin-app-box input { background:#fff; border:1px solid #ffe0e5; border-radius:22px; }
+      .cliente-sin-app-box input[readonly] { background:#f3f0f2; color:#8c8490; }
+      .nombre-sin-app-wrap { position:relative; }
+      .limpiar-seleccion-btn {
+        position:absolute; right:10px; top:50%; transform:translateY(-50%);
+        width:26px; height:26px; border-radius:50%; border:0; background:#2b2a31; color:#fff;
+        font-size:16px; line-height:1; cursor:pointer; padding:0; margin:0;
+      }
+      #sugerenciasSinApp { position:relative; top:0; }
+      #sugerenciasSinApp:not(:empty) { margin-bottom:8px; }
       .download-btn { background:linear-gradient(135deg,#2b2a31,#57515c); box-shadow:0 12px 24px rgba(43,42,49,.18); }
       .download-btn:disabled, .download-btn.disabled {
         background:#d9d5dc !important; color:#8c8490 !important; cursor:not-allowed !important;
@@ -1338,7 +1363,11 @@ def vista_empleados(request: Request):
             <p class='upload-hint'>No usa IA, no guarda análisis y no requiere app. El empleado selecciona una rutina existente del JSON.</p>
             <div class='cliente-sin-app-box'>
               <label>Nombre del cliente</label>
-              <input id='clienteSinAppNombre' type='text' autocomplete='off' placeholder='Ej: María Pérez'>
+              <div class='nombre-sin-app-wrap'>
+                <input id='clienteSinAppNombre' type='text' autocomplete='off' placeholder='Ej: María Pérez'>
+                <button id='clienteSinAppLimpiar' type='button' class='limpiar-seleccion-btn hidden' title='Quitar seleccion'>×</button>
+              </div>
+              <div id='sugerenciasSinApp' class='suggestions'></div>
               <label>Número de teléfono</label>
               <input id='clienteSinAppTelefono' type='tel' autocomplete='off' placeholder='Ej: 809-000-0000'>
             </div>
@@ -1458,11 +1487,71 @@ def vista_empleados(request: Request):
       const pdfMaquinaSinApp = document.getElementById('pdfMaquinaSinApp');
       const clienteSinAppNombre = document.getElementById('clienteSinAppNombre');
       const clienteSinAppTelefono = document.getElementById('clienteSinAppTelefono');
+      const clienteSinAppLimpiar = document.getElementById('clienteSinAppLimpiar');
+      const sugerenciasSinApp = document.getElementById('sugerenciasSinApp');
       const rutinaRapidaResultado = document.getElementById('rutinaRapidaResultado');
       const RUTINAS_NO_APP = __RUTINAS_NO_APP_JSON__;
       let timer = null;
+      let timerSinApp = null;
+      let clienteSinAppSeleccionado = false;
       let clienteActual = null;
       cargarRutinasRapidas();
+
+      clienteSinAppNombre.addEventListener('input', () => {
+        if (clienteSinAppSeleccionado) return;
+        const q = clienteSinAppNombre.value.trim();
+        clearTimeout(timerSinApp);
+        if (q.length < 2) { sugerenciasSinApp.style.display = 'none'; sugerenciasSinApp.innerHTML = ''; return; }
+        timerSinApp = setTimeout(() => buscarClienteOdooSinApp(q), 260);
+      });
+
+      async function buscarClienteOdooSinApp(q) {
+        sugerenciasSinApp.innerHTML = `<div class='suggestion'><div><b>Buscando en Odoo...</b></div></div>`;
+        sugerenciasSinApp.style.display = 'block';
+        try {
+          const res = await fetchSeguro(`/kbeauty-data/clientes-odoo/buscar?q=${encodeURIComponent(q)}`);
+          const data = await res.json();
+          const items = data.datos || [];
+          if (!items.length) {
+            sugerenciasSinApp.innerHTML = `<div class='suggestion'><div><b>Sin coincidencias en Odoo</b><div class='s-meta'>Puedes seguir escribiendo el nombre a mano.</div></div></div>`;
+            return;
+          }
+          sugerenciasSinApp.innerHTML = items.map((c, i) => `
+            <div class='suggestion' data-indice='${i}'>
+              <div><div class='s-name'>${(c.nombre || 'Sin nombre').replace(/</g, '&lt;')}</div><div class='s-meta'>${(c.telefono || 'Sin telefono').replace(/</g, '&lt;')}</div></div>
+              <div class='s-id'>Seleccionar</div>
+            </div>`).join('');
+          document.querySelectorAll('#sugerenciasSinApp .suggestion[data-indice]').forEach(el => {
+            const item = items[Number(el.dataset.indice)];
+            el.addEventListener('click', () => seleccionarClienteOdooSinApp(item));
+          });
+        } catch (e) {
+          sugerenciasSinApp.innerHTML = `<div class='suggestion'><div><b>Error buscando en Odoo</b></div></div>`;
+        }
+      }
+
+      function seleccionarClienteOdooSinApp(item) {
+        clienteSinAppNombre.value = item.nombre || '';
+        clienteSinAppTelefono.value = item.telefono || '';
+        clienteSinAppTelefono.readOnly = true;
+        clienteSinAppSeleccionado = true;
+        clienteSinAppLimpiar.classList.remove('hidden');
+        sugerenciasSinApp.style.display = 'none';
+        sugerenciasSinApp.innerHTML = '';
+        actualizarBotonPdfSinApp();
+      }
+
+      clienteSinAppLimpiar.addEventListener('click', () => {
+        clienteSinAppNombre.value = '';
+        clienteSinAppTelefono.value = '';
+        clienteSinAppTelefono.readOnly = false;
+        clienteSinAppSeleccionado = false;
+        clienteSinAppLimpiar.classList.add('hidden');
+        sugerenciasSinApp.style.display = 'none';
+        sugerenciasSinApp.innerHTML = '';
+        clienteSinAppNombre.focus();
+        actualizarBotonPdfSinApp();
+      });
       actualizarEstadoUploadPorCliente();
       configurarCopiarInvitacion();
 
@@ -2001,6 +2090,22 @@ def api_buscar_clientes(request: Request, q: str = Query(..., min_length=1)):
         return redireccion
     exigir_empleado(usuario)
     return respuesta_correcta("Clientes encontrados", buscar_clientes(q, token=usuario.get("token_villar_do"), datos_sesion=usuario.get("datos_villar")))
+
+
+@router.get("/kbeauty-data/clientes-odoo/buscar")
+def api_buscar_clientes_odoo(request: Request, q: str = Query("", min_length=0)):
+    """Busqueda en vivo contra Odoo para autocompletar nombre/telefono en el
+    formulario 'sin app'. Best-effort: si Odoo falla, devuelve lista vacia
+    en vez de romper la busqueda del empleado."""
+    usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/empleados")
+    if redireccion:
+        return redireccion
+    exigir_empleado(usuario)
+    try:
+        resultados = buscar_partners_clientes_por_nombre(q)
+    except Exception:
+        resultados = []
+    return respuesta_correcta("Clientes de Odoo encontrados", resultados)
 
 
 @router.post("/kbeauty-data/analisis-presencial/subir")

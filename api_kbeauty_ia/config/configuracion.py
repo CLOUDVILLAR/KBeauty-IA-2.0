@@ -39,6 +39,7 @@ def obtener_lista(nombre, valor_defecto=None):
 
 
 APP_NOMBRE = obtener_variable("APP_NOMBRE", "KBeauty IA API")
+APP_ENTORNO = (obtener_variable("APP_ENTORNO", "produccion") or "produccion").strip().lower()
 APP_DEBUG = obtener_booleano("APP_DEBUG", True)
 APP_HOST = obtener_variable("APP_HOST", "0.0.0.0")
 APP_PORT = obtener_entero("APP_PORT", 8000)
@@ -85,6 +86,7 @@ CORS_ORIGENES = obtener_lista("CORS_ORIGENES", ["*"])
 def obtener_configuracion():
     return {
         "app_nombre": APP_NOMBRE,
+        "app_entorno": APP_ENTORNO,
         "app_debug": APP_DEBUG,
         "app_host": APP_HOST,
         "app_port": APP_PORT,

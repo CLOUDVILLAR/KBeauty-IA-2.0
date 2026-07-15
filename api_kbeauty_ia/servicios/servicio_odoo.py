@@ -226,6 +226,26 @@ def buscar_partner_clientes_por_telefono(telefono):
     return None
 
 
+def buscar_partners_clientes_por_nombre(texto, limite=10):
+    """Busqueda en vivo (autocompletar) de clientes de Odoo por nombre, para
+    el formulario 'sin app' de KBeauty. Devuelve nombre + telefono, nada mas
+    -- no se usa para vincular, solo para que el empleado elija y se le
+    autocomplete el telefono."""
+    texto = (texto or "").strip()
+    if len(texto) < 2:
+        return []
+    encontrados = ejecutar_odoo_clientes(
+        "res.partner", "search_read",
+        [[["name", "ilike", texto]]],
+        {"fields": ["id", "name", "phone", "mobile"], "limit": limite, "order": "name asc"},
+    ) or []
+    resultados = []
+    for partner in encontrados:
+        telefono = partner.get("phone") or partner.get("mobile") or ""
+        resultados.append({"id": partner["id"], "nombre": partner.get("name") or "", "telefono": telefono})
+    return resultados
+
+
 def crear_partner_clientes(nombre, apellido, telefono):
     nombre_completo = f"{(nombre or '').strip()} {(apellido or '').strip()}".strip() or "Cliente KBeauty"
     vals = {"name": nombre_completo}
