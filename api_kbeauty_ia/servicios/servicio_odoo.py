@@ -248,29 +248,33 @@ def buscar_partners_clientes_por_nombre(texto, limite=10):
 
 def buscar_partners_clientes_por_telefono_autocomplete(texto, limite=10):
     """Busqueda en vivo (autocompletar) de clientes de Odoo por telefono,
-    para el formulario 'sin app' de KBeauty. Coincidencia parcial (ilike)
-    tanto por el texto crudo como por solo digitos, para tolerar guiones y
-    el +1. Devuelve nombre + telefono."""
-    crudo = (texto or "").strip()
-    digitos = _solo_digitos(crudo)
-    if len(crudo) < 3 and not (digitos and len(digitos) >= 3):
+    para el formulario 'sin app' de KBeauty.
+
+    En Odoo los telefonos se guardan con formato (+1 809-931-7876), asi que
+    un ilike por digitos seguidos no matchea. Se busca por los ultimos 4
+    digitos (un grupo limpio del formato) para traer candidatos, y se filtra
+    en Python comparando SOLO digitos -- asi tolera guiones, espacios y el
+    +1, sin importar como escriba el empleado."""
+    digitos = _solo_digitos(texto)
+    if not digitos or len(digitos) < 4:
         return []
 
-    terminos = [t for t in {crudo, digitos} if t]
-    candidatos_por_id = {}
-    for termino in terminos:
-        encontrados = ejecutar_odoo_clientes(
-            "res.partner", "search_read",
-            [["|", ["phone", "ilike", termino], ["mobile", "ilike", termino]]],
-            {"fields": ["id", "name", "phone", "mobile"], "limit": limite, "order": "name asc"},
-        ) or []
-        for partner in encontrados:
-            candidatos_por_id[partner["id"]] = partner
+    termino = digitos[-4:]
+    encontrados = ejecutar_odoo_clientes(
+        "res.partner", "search_read",
+        [["|", ["phone", "ilike", termino], ["mobile", "ilike", termino]]],
+        {"fields": ["id", "name", "phone", "mobile"], "limit": 300, "order": "name asc"},
+    ) or []
 
     resultados = []
-    for partner in list(candidatos_por_id.values())[:limite]:
-        telefono = partner.get("phone") or partner.get("mobile") or ""
-        resultados.append({"id": partner["id"], "nombre": partner.get("name") or "", "telefono": telefono})
+    for partner in encontrados:
+        pd = _solo_digitos(partner.get("phone")) or ""
+        md = _solo_digitos(partner.get("mobile")) or ""
+        if digitos in pd or digitos in md:
+            telefono = partner.get("phone") or partner.get("mobile") or ""
+            resultados.append({"id": partner["id"], "nombre": partner.get("name") or "", "telefono": telefono})
+            if len(resultados) >= limite:
+                break
     return resultados
 
 

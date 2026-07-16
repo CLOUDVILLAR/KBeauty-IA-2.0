@@ -1503,8 +1503,9 @@ def vista_empleados(request: Request):
       clienteSinAppTelefono.addEventListener('input', () => {
         if (clienteSinAppSeleccionado) return;
         const q = clienteSinAppTelefono.value.trim();
+        const digitos = q.replace(/\D/g, '');
         clearTimeout(timerSinApp);
-        if (q.length < 3) { sugerenciasSinApp.style.display = 'none'; sugerenciasSinApp.innerHTML = ''; return; }
+        if (digitos.length < 4) { sugerenciasSinApp.style.display = 'none'; sugerenciasSinApp.innerHTML = ''; return; }
         timerSinApp = setTimeout(() => buscarClienteOdooSinApp(q), 260);
       });
 
