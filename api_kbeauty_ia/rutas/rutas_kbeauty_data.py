@@ -1528,13 +1528,31 @@ def vista_empleados(request: Request):
         try { clienteSinAppTelefono.setSelectionRange(nuevo.length, nuevo.length); } catch (e) {}
       }
 
+      // El nombre solo se puede escribir a mano cuando la busqueda por telefono
+      // NO encontro a nadie. Si hay coincidencias (o aun no se busco), queda
+      // bloqueado para forzar seleccionar el cliente existente.
+      function fijarNombreManualHabilitado(habilitado, limpiar) {
+        clienteSinAppNombre.readOnly = !habilitado;
+        if (limpiar) clienteSinAppNombre.value = '';
+        clienteSinAppNombre.placeholder = habilitado
+          ? 'Ej: María Pérez'
+          : 'Escribe el teléfono; si el cliente no existe, aquí pondrás el nombre';
+      }
+      // Estado inicial: bloqueado hasta que se busque.
+      fijarNombreManualHabilitado(false, true);
+
       clienteSinAppTelefono.addEventListener('input', () => {
         if (clienteSinAppSeleccionado) return;
         aplicarFormatoTelefono();
         const q = clienteSinAppTelefono.value.trim();
         const digitos = q.replace(/[^0-9]/g, '');
         clearTimeout(timerSinApp);
-        if (digitos.length < 4) { sugerenciasSinApp.style.display = 'none'; sugerenciasSinApp.innerHTML = ''; return; }
+        if (digitos.length < 4) {
+          sugerenciasSinApp.style.display = 'none'; sugerenciasSinApp.innerHTML = '';
+          fijarNombreManualHabilitado(false, true);
+          return;
+        }
+        fijarNombreManualHabilitado(false, false);
         timerSinApp = setTimeout(() => buscarClienteOdooSinApp(q), 260);
       });
 
@@ -1546,9 +1564,13 @@ def vista_empleados(request: Request):
           const data = await res.json();
           const items = data.datos || [];
           if (!items.length) {
+            // Nadie con ese telefono -> cliente nuevo: se habilita escribir el nombre.
             sugerenciasSinApp.innerHTML = `<div class='suggestion'><div><b>Sin coincidencias en Odoo</b><div class='s-meta'>Es un cliente nuevo: escribe su nombre a mano.</div></div></div>`;
+            fijarNombreManualHabilitado(true, false);
             return;
           }
+          // Hay clientes con ese telefono -> el nombre queda bloqueado, hay que seleccionar uno.
+          fijarNombreManualHabilitado(false, true);
           sugerenciasSinApp.innerHTML = items.map((c, i) => `
             <div class='suggestion' data-indice='${i}'>
               <div><div class='s-name'>${(c.nombre || 'Sin nombre').replace(/</g, '&lt;')}</div><div class='s-meta'>${(c.telefono || 'Sin telefono').replace(/</g, '&lt;')}</div></div>
@@ -1576,14 +1598,14 @@ def vista_empleados(request: Request):
       }
 
       clienteSinAppLimpiar.addEventListener('click', () => {
-        clienteSinAppNombre.value = '';
         clienteSinAppTelefono.value = '';
-        clienteSinAppNombre.readOnly = false;
         clienteSinAppTelefono.readOnly = false;
         clienteSinAppSeleccionado = false;
         clienteSinAppLimpiar.classList.add('hidden');
         sugerenciasSinApp.style.display = 'none';
         sugerenciasSinApp.innerHTML = '';
+        // Nombre vuelve a bloqueado hasta que una nueva busqueda diga que no hay match.
+        fijarNombreManualHabilitado(false, true);
         clienteSinAppTelefono.focus();
         actualizarBotonPdfSinApp();
       });
