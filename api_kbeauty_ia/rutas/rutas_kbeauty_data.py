@@ -1500,8 +1500,37 @@ def vista_empleados(request: Request):
       let clienteActual = null;
       cargarRutinasRapidas();
 
+      function formatearNumeroVillar(valor) {
+        const crudo = (valor || '').trim();
+        const empiezaPlus = crudo.startsWith('+');
+        let digitos = crudo.replace(/[^0-9]/g, '');
+        if (!digitos) return empiezaPlus ? '+' : '';
+        // Otro pais: el usuario escribio + y un codigo distinto de 1.
+        // No forzamos el formato +1; mantenemos lo que escribio (solo digitos
+        // con su +) porque cada pais agrupa distinto.
+        if (empiezaPlus && !digitos.startsWith('1')) {
+          return '+' + digitos;
+        }
+        // NANP / +1 (Republica Dominicana: 809/829/849). Nos quedamos con los
+        // ultimos 10 digitos y formateamos +1 XXX-XXX-XXXX igual que Odoo.
+        if (digitos.startsWith('1')) digitos = digitos.slice(1);
+        digitos = digitos.slice(0, 10);
+        let out = '+1';
+        if (digitos.length > 0) out += ' ' + digitos.slice(0, 3);
+        if (digitos.length >= 4) out += '-' + digitos.slice(3, 6);
+        if (digitos.length >= 7) out += '-' + digitos.slice(6, 10);
+        return out;
+      }
+
+      function aplicarFormatoTelefono() {
+        const nuevo = formatearNumeroVillar(clienteSinAppTelefono.value);
+        clienteSinAppTelefono.value = nuevo;
+        try { clienteSinAppTelefono.setSelectionRange(nuevo.length, nuevo.length); } catch (e) {}
+      }
+
       clienteSinAppTelefono.addEventListener('input', () => {
         if (clienteSinAppSeleccionado) return;
+        aplicarFormatoTelefono();
         const q = clienteSinAppTelefono.value.trim();
         const digitos = q.replace(/[^0-9]/g, '');
         clearTimeout(timerSinApp);
