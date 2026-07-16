@@ -246,6 +246,34 @@ def buscar_partners_clientes_por_nombre(texto, limite=10):
     return resultados
 
 
+def buscar_partners_clientes_por_telefono_autocomplete(texto, limite=10):
+    """Busqueda en vivo (autocompletar) de clientes de Odoo por telefono,
+    para el formulario 'sin app' de KBeauty. Coincidencia parcial (ilike)
+    tanto por el texto crudo como por solo digitos, para tolerar guiones y
+    el +1. Devuelve nombre + telefono."""
+    crudo = (texto or "").strip()
+    digitos = _solo_digitos(crudo)
+    if len(crudo) < 3 and not (digitos and len(digitos) >= 3):
+        return []
+
+    terminos = [t for t in {crudo, digitos} if t]
+    candidatos_por_id = {}
+    for termino in terminos:
+        encontrados = ejecutar_odoo_clientes(
+            "res.partner", "search_read",
+            [["|", ["phone", "ilike", termino], ["mobile", "ilike", termino]]],
+            {"fields": ["id", "name", "phone", "mobile"], "limit": limite, "order": "name asc"},
+        ) or []
+        for partner in encontrados:
+            candidatos_por_id[partner["id"]] = partner
+
+    resultados = []
+    for partner in list(candidatos_por_id.values())[:limite]:
+        telefono = partner.get("phone") or partner.get("mobile") or ""
+        resultados.append({"id": partner["id"], "nombre": partner.get("name") or "", "telefono": telefono})
+    return resultados
+
+
 def crear_partner_clientes(nombre, apellido, telefono):
     nombre_completo = f"{(nombre or '').strip()} {(apellido or '').strip()}".strip() or "Cliente KBeauty"
     vals = {"name": nombre_completo}

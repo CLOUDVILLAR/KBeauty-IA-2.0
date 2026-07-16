@@ -36,7 +36,10 @@ from servicios.servicio_kbeauty_data import (
 )
 from config.configuracion import VILLAR_DO_API_URL, VILLAR_DO_CLIENT_ID, obtener_configuracion
 from servicios.servicio_rutinas import listar_rutinas
-from servicios.servicio_odoo import buscar_partners_clientes_por_nombre
+from servicios.servicio_odoo import (
+    buscar_partners_clientes_por_nombre,
+    buscar_partners_clientes_por_telefono_autocomplete,
+)
 from servicios.servicio_usuarios import obtener_roles_usuario
 from utilidades.respuestas import respuesta_correcta, respuesta_error
 
@@ -1362,14 +1365,14 @@ def vista_empleados(request: Request):
             <h2>Rutina rápida</h2>
             <p class='upload-hint'>No usa IA, no guarda análisis y no requiere app. El empleado selecciona una rutina existente del JSON.</p>
             <div class='cliente-sin-app-box'>
+              <label>Número de teléfono</label>
+              <input id='clienteSinAppTelefono' type='tel' autocomplete='off' placeholder='Ej: 809-000-0000'>
+              <div id='sugerenciasSinApp' class='suggestions'></div>
               <label>Nombre del cliente</label>
               <div class='nombre-sin-app-wrap'>
                 <input id='clienteSinAppNombre' type='text' autocomplete='off' placeholder='Ej: María Pérez'>
                 <button id='clienteSinAppLimpiar' type='button' class='limpiar-seleccion-btn hidden' title='Quitar seleccion'>×</button>
               </div>
-              <div id='sugerenciasSinApp' class='suggestions'></div>
-              <label>Número de teléfono</label>
-              <input id='clienteSinAppTelefono' type='tel' autocomplete='off' placeholder='Ej: 809-000-0000'>
             </div>
             <div class='pdf-maquina-box'>
               <label>PDF del análisis de la máquina <span class='small'>(obligatorio)</span></label>
@@ -1497,11 +1500,11 @@ def vista_empleados(request: Request):
       let clienteActual = null;
       cargarRutinasRapidas();
 
-      clienteSinAppNombre.addEventListener('input', () => {
+      clienteSinAppTelefono.addEventListener('input', () => {
         if (clienteSinAppSeleccionado) return;
-        const q = clienteSinAppNombre.value.trim();
+        const q = clienteSinAppTelefono.value.trim();
         clearTimeout(timerSinApp);
-        if (q.length < 2) { sugerenciasSinApp.style.display = 'none'; sugerenciasSinApp.innerHTML = ''; return; }
+        if (q.length < 3) { sugerenciasSinApp.style.display = 'none'; sugerenciasSinApp.innerHTML = ''; return; }
         timerSinApp = setTimeout(() => buscarClienteOdooSinApp(q), 260);
       });
 
@@ -1509,11 +1512,11 @@ def vista_empleados(request: Request):
         sugerenciasSinApp.innerHTML = `<div class='suggestion'><div><b>Buscando en Odoo...</b></div></div>`;
         sugerenciasSinApp.style.display = 'block';
         try {
-          const res = await fetchSeguro(`/kbeauty-data/clientes-odoo/buscar?q=${encodeURIComponent(q)}`);
+          const res = await fetchSeguro(`/kbeauty-data/clientes-odoo/buscar-telefono?q=${encodeURIComponent(q)}`);
           const data = await res.json();
           const items = data.datos || [];
           if (!items.length) {
-            sugerenciasSinApp.innerHTML = `<div class='suggestion'><div><b>Sin coincidencias en Odoo</b><div class='s-meta'>Puedes seguir escribiendo el nombre a mano.</div></div></div>`;
+            sugerenciasSinApp.innerHTML = `<div class='suggestion'><div><b>Sin coincidencias en Odoo</b><div class='s-meta'>Es un cliente nuevo: escribe su nombre a mano.</div></div></div>`;
             return;
           }
           sugerenciasSinApp.innerHTML = items.map((c, i) => `
@@ -1531,8 +1534,9 @@ def vista_empleados(request: Request):
       }
 
       function seleccionarClienteOdooSinApp(item) {
+        clienteSinAppTelefono.value = item.telefono || clienteSinAppTelefono.value;
         clienteSinAppNombre.value = item.nombre || '';
-        clienteSinAppTelefono.value = item.telefono || '';
+        clienteSinAppNombre.readOnly = true;
         clienteSinAppTelefono.readOnly = true;
         clienteSinAppSeleccionado = true;
         clienteSinAppLimpiar.classList.remove('hidden');
@@ -1544,12 +1548,13 @@ def vista_empleados(request: Request):
       clienteSinAppLimpiar.addEventListener('click', () => {
         clienteSinAppNombre.value = '';
         clienteSinAppTelefono.value = '';
+        clienteSinAppNombre.readOnly = false;
         clienteSinAppTelefono.readOnly = false;
         clienteSinAppSeleccionado = false;
         clienteSinAppLimpiar.classList.add('hidden');
         sugerenciasSinApp.style.display = 'none';
         sugerenciasSinApp.innerHTML = '';
-        clienteSinAppNombre.focus();
+        clienteSinAppTelefono.focus();
         actualizarBotonPdfSinApp();
       });
       actualizarEstadoUploadPorCliente();
@@ -2103,6 +2108,21 @@ def api_buscar_clientes_odoo(request: Request, q: str = Query("", min_length=0))
     exigir_empleado(usuario)
     try:
         resultados = buscar_partners_clientes_por_nombre(q)
+    except Exception:
+        resultados = []
+    return respuesta_correcta("Clientes de Odoo encontrados", resultados)
+
+
+@router.get("/kbeauty-data/clientes-odoo/buscar-telefono")
+def api_buscar_clientes_odoo_telefono(request: Request, q: str = Query("", min_length=0)):
+    """Busqueda en vivo contra Odoo por telefono para autocompletar el nombre
+    en el formulario 'sin app'. Best-effort: si Odoo falla, lista vacia."""
+    usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/empleados")
+    if redireccion:
+        return redireccion
+    exigir_empleado(usuario)
+    try:
+        resultados = buscar_partners_clientes_por_telefono_autocomplete(q)
     except Exception:
         resultados = []
     return respuesta_correcta("Clientes de Odoo encontrados", resultados)
