@@ -45,5 +45,16 @@ const String rutaChatMensaje = '/chat/mensaje';
 const String rutaVillarRecuperar = '/api/auth/recuperar';
 const String rutaVillarCambiarPassword = '/api/auth/cambiar-password';
 
+// App de promotoras (tablet sin login): clave compartida embebida en el build
+// via --dart-define, distinta de villarDoAppKey.
+const String promotorasAppKey = String.fromEnvironment(
+  'PROMOTORAS_APP_KEY',
+  defaultValue: '',
+);
+
+const String rutaPromotorasRutinas = '/promotoras/rutinas';
+const String rutaPromotorasAnalisis = '/promotoras/analisis';
+const String rutaPromotorasGuardar = '/promotoras/guardar';
+
 String crearUrl(String ruta) => '$urlApi$ruta';
 String crearUrlVillarDo(String ruta) => '$urlVillarDo$ruta';
