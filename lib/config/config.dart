@@ -52,7 +52,6 @@ const String promotorasAppKey = String.fromEnvironment(
   defaultValue: '',
 );
 
-const String rutaPromotorasRutinas = '/promotoras/rutinas';
 const String rutaPromotorasAnalisis = '/promotoras/analisis';
 const String rutaPromotorasGuardar = '/promotoras/guardar';
 

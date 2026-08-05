@@ -59,6 +59,9 @@ VILLAR_DO_TIMEOUT_SEGUNDOS = obtener_entero("VILLAR_DO_TIMEOUT_SEGUNDOS", 12)
 # Si no se configura, KBEAUTY-DATA funciona igual, pero solo muestra id/villar_id locales.
 VILLAR_DO_ADMIN_TOKEN = obtener_variable("VILLAR_DO_ADMIN_TOKEN", "")
 
+# Clave compartida para la app de promotoras (tablet sin login). No confundir con VILLAR_DO_APP_KEY.
+PROMOTORAS_APP_KEY = obtener_variable("PROMOTORAS_APP_KEY", "")
+
 OPENAI_API_KEY = obtener_variable("OPENAI_API_KEY", "")
 OPENAI_MODELO = obtener_variable("OPENAI_MODELO", "gpt-4.1-mini")
 OPENAI_MODO_DEMO = obtener_booleano("OPENAI_MODO_DEMO", False)
@@ -100,6 +103,7 @@ def obtener_configuracion():
         "villar_do_app_key": VILLAR_DO_APP_KEY,
         "villar_do_timeout_segundos": VILLAR_DO_TIMEOUT_SEGUNDOS,
         "villar_do_admin_token": VILLAR_DO_ADMIN_TOKEN,
+        "promotoras_app_key": PROMOTORAS_APP_KEY,
         "openai_api_key": OPENAI_API_KEY,
         "openai_modelo": OPENAI_MODELO,
         "openai_modo_demo": OPENAI_MODO_DEMO,

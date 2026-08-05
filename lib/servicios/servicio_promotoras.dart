@@ -3,15 +3,6 @@ import 'dart:io';
 import '../config/config.dart';
 import 'servicio_api_promotoras.dart';
 
-Future<List<Map<String, dynamic>>> obtenerRutinasPromotoras() async {
-  final respuesta = await enviarGetPromotoras(rutaPromotorasRutinas);
-  final datos = respuesta['datos'];
-  if (datos is List) {
-    return datos.map((item) => Map<String, dynamic>.from(item as Map)).toList();
-  }
-  return [];
-}
-
 Future<Map<String, dynamic>> analizarFotosPromotoras({
   required File frente,
   required File ladoIzquierdo,
@@ -27,23 +18,25 @@ Future<Map<String, dynamic>> analizarFotosPromotoras({
   return Map<String, dynamic>.from(datos['resultado_ia'] ?? {});
 }
 
+/// [tipoPielSeleccionado] es el tipo de piel que confirma la promotora, o
+/// null si eligio "No lo se" (en ese caso el backend usa el estimado por la
+/// IA a partir de las mismas fotos). La condicion siempre la decide el
+/// analisis de fotos, nunca se elige a mano.
 Future<Map<String, dynamic>> guardarAnalisisPromotora({
   required String clienteNombre,
   required String clienteTelefono,
   required Map<String, dynamic> resultadoIa,
-  required String modoRutina,
   String clienteApellido = '',
-  String? rutinaNombre,
+  String? tipoPielSeleccionado,
 }) async {
   final cuerpo = <String, dynamic>{
     'cliente_nombre': clienteNombre,
     'cliente_apellido': clienteApellido,
     'cliente_telefono': clienteTelefono,
     'resultado_ia': resultadoIa,
-    'modo_rutina': modoRutina,
   };
-  if (rutinaNombre != null) {
-    cuerpo['rutina_nombre'] = rutinaNombre;
+  if (tipoPielSeleccionado != null) {
+    cuerpo['tipo_piel_seleccionado'] = tipoPielSeleccionado;
   }
 
   final respuesta = await enviarPostPromotoras(rutaPromotorasGuardar, cuerpo);
