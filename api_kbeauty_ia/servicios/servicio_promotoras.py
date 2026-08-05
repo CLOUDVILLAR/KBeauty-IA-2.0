@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-from base_datos.conexion import ejecutar
+from base_datos.conexion import consultar_todos, consultar_uno, ejecutar
 from servicios.servicio_analisis import guardar_analisis, guardar_rutina_recomendada
 from servicios.servicio_odoo import odoo_esta_configurado
 from servicios.servicio_openai import analizar_imagenes_piel
@@ -72,8 +72,17 @@ def guardar_analisis_promotora(datos):
     asegurar_usuario_local(villar_id, resultado_villar)
 
     analisis = guardar_analisis(villar_id, resultado_ia)
-    ejecutar("UPDATE analisis_piel SET origen = 'promotora' WHERE id = %s", (analisis["id"],))
+    ejecutar(
+        """
+        UPDATE analisis_piel
+        SET origen = 'promotora', cliente_nombre = %s, cliente_telefono = %s
+        WHERE id = %s
+        """,
+        (nombre, telefono, analisis["id"]),
+    )
     analisis["origen"] = "promotora"
+    analisis["cliente_nombre"] = nombre
+    analisis["cliente_telefono"] = telefono
 
     # Si la promotora confirma la rutina (por nombre, de la lista del JSON) se
     # usa esa tal cual. Si no sabe ("No lo se"), la condicion y el tipo de
@@ -97,3 +106,42 @@ def guardar_analisis_promotora(datos):
         "rutina_guardada": rutina_guardada,
         "villar_id": villar_id,
     }
+
+
+def obtener_historial_promotoras(limite=50):
+    return consultar_todos(
+        """
+        SELECT id, creado_en, cliente_nombre, cliente_telefono,
+               resumen_general, tono_piel, condicion_principal_detectada
+        FROM analisis_piel
+        WHERE origen = 'promotora'
+        ORDER BY creado_en DESC
+        LIMIT %s
+        """,
+        (limite,),
+    )
+
+
+def obtener_detalle_analisis_promotora(analisis_id):
+    analisis = consultar_uno(
+        "SELECT * FROM analisis_piel WHERE id = %s AND origen = 'promotora'",
+        (analisis_id,),
+    )
+    if not analisis:
+        respuesta_error("Analisis no encontrado", 404)
+
+    zonas = consultar_todos(
+        "SELECT * FROM analisis_zonas WHERE analisis_id = %s ORDER BY zona",
+        (analisis_id,),
+    )
+    rutina = consultar_uno(
+        "SELECT * FROM rutinas_recomendadas WHERE analisis_id = %s ORDER BY creado_en DESC LIMIT 1",
+        (analisis_id,),
+    )
+    productos = []
+    if rutina:
+        productos = consultar_todos(
+            "SELECT * FROM productos_recomendados WHERE rutina_id = %s ORDER BY momento, orden",
+            (rutina["id"],),
+        )
+    return {"analisis": analisis, "zonas": zonas, "rutina": rutina, "productos": productos}

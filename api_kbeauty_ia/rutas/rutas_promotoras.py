@@ -1,12 +1,14 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Body, Depends, File, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Query, UploadFile
 
 from dependencias.autenticacion_promotoras import verificar_clave_promotoras
 from servicios.servicio_promotoras import (
     analizar_walkin,
     guardar_analisis_promotora,
     listar_rutinas_promotoras,
+    obtener_detalle_analisis_promotora,
+    obtener_historial_promotoras,
 )
 from utilidades.respuestas import respuesta_correcta, respuesta_error
 
@@ -44,3 +46,16 @@ def ruta_analizar_walkin(
 def ruta_guardar_analisis(datos: dict = Body(...), autorizado=Depends(verificar_clave_promotoras)):
     resultado = guardar_analisis_promotora(datos)
     return respuesta_correcta("Analisis de promotora guardado correctamente", resultado)
+
+
+@router.get("/historial")
+def ruta_historial(
+    limite: int = Query(50, ge=1, le=200),
+    autorizado=Depends(verificar_clave_promotoras),
+):
+    return respuesta_correcta("Historial de analisis", obtener_historial_promotoras(limite))
+
+
+@router.get("/historial/{analisis_id}")
+def ruta_detalle_historial(analisis_id: str, autorizado=Depends(verificar_clave_promotoras)):
+    return respuesta_correcta("Detalle del analisis", obtener_detalle_analisis_promotora(analisis_id))
