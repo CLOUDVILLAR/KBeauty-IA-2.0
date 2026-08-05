@@ -8,12 +8,10 @@ import '../widgets/selector_opcion.dart';
 import '../widgets/tarjeta_base.dart';
 import 'pantalla_resultado_analisis.dart';
 
-const List<String> _tiposPiel = ['seca', 'grasa', 'mixta', 'normal', 'sensible'];
-
-/// La rutina siempre sale del analisis de las fotos (la condicion detectada
-/// nunca se elige a mano). Esta pantalla solo le pide a la promotora que
-/// confirme el tipo de piel para afinar la recomendacion; si no lo sabe, se
-/// usa el tipo de piel que la misma IA estimo de las fotos.
+/// Pregunta el tipo de piel de la persona mostrando los nombres reales de
+/// las rutinas del JSON (ej. "Piel sensible con melasma"), para que la
+/// promotora elija algo descriptivo y no un tipo generico. Si no lo sabe, la
+/// IA decide con el mismo analisis de fotos (tipo de piel y condicion).
 class PantallaEleccionRutina extends StatefulWidget {
   const PantallaEleccionRutina({
     super.key,
@@ -33,10 +31,38 @@ class PantallaEleccionRutina extends StatefulWidget {
 }
 
 class _PantallaEleccionRutinaState extends State<PantallaEleccionRutina> {
-  String? tipoPielElegido;
+  List<String> rutinas = [];
+  String? rutinaElegida;
+  bool cargandoRutinas = true;
   bool guardando = false;
+  String? errorCarga;
 
-  Future<void> guardar({String? tipoPiel}) async {
+  @override
+  void initState() {
+    super.initState();
+    _cargarRutinas();
+  }
+
+  Future<void> _cargarRutinas() async {
+    setState(() {
+      cargandoRutinas = true;
+      errorCarga = null;
+    });
+    try {
+      final lista = await obtenerRutinasPromotoras();
+      final nombres = lista
+          .map((rutina) => (rutina['nombre'] ?? '').toString())
+          .where((nombre) => nombre.isNotEmpty)
+          .toList();
+      if (mounted) setState(() => rutinas = nombres);
+    } catch (error) {
+      if (mounted) setState(() => errorCarga = error.toString());
+    } finally {
+      if (mounted) setState(() => cargandoRutinas = false);
+    }
+  }
+
+  Future<void> guardar({String? nombreRutina}) async {
     setState(() => guardando = true);
     try {
       final resultado = await guardarAnalisisPromotora(
@@ -44,7 +70,7 @@ class _PantallaEleccionRutinaState extends State<PantallaEleccionRutina> {
         clienteApellido: widget.clienteApellido,
         clienteTelefono: widget.clienteTelefono,
         resultadoIa: widget.resultadoIa,
-        tipoPielSeleccionado: tipoPiel,
+        rutinaNombre: nombreRutina,
       );
 
       if (!mounted) return;
@@ -81,31 +107,37 @@ class _PantallaEleccionRutinaState extends State<PantallaEleccionRutina> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'La rutina se arma con el analisis de las fotos. Confirma el tipo de piel '
-                      'para afinar la recomendacion.',
+                      'La rutina se arma con el analisis de las fotos. Elige la opcion que '
+                      'mejor describe a la persona para afinar la recomendacion.',
                     ),
                     const SizedBox(height: 18),
-                    selectorOpcion(
-                      etiqueta: 'Tipo de piel',
-                      valor: tipoPielElegido,
-                      opciones: _tiposPiel,
-                      alCambiar: (valor) => setState(() => tipoPielElegido = valor),
-                    ),
-                    const SizedBox(height: 16),
-                    botonPrincipal(
-                      texto: 'Guardar',
-                      icono: Icons.check_circle_outline,
-                      cargando: guardando,
-                      alPresionar: tipoPielElegido == null
-                          ? null
-                          : () => guardar(tipoPiel: tipoPielElegido),
-                    ),
-                    const SizedBox(height: 10),
-                    TextButton.icon(
-                      onPressed: guardando ? null : () => guardar(tipoPiel: null),
-                      icon: const Icon(Icons.auto_awesome_outlined),
-                      label: const Text('No lo se, que el analisis decida'),
-                    ),
+                    if (cargandoRutinas) cargandoCentro('Cargando opciones...'),
+                    if (!cargandoRutinas && errorCarga != null)
+                      mensajeError('No se pudieron cargar las opciones: $errorCarga',
+                          alReintentar: _cargarRutinas),
+                    if (!cargandoRutinas && errorCarga == null) ...[
+                      selectorOpcion(
+                        etiqueta: 'Tipo de piel',
+                        valor: rutinaElegida,
+                        opciones: rutinas,
+                        alCambiar: (valor) => setState(() => rutinaElegida = valor),
+                      ),
+                      const SizedBox(height: 16),
+                      botonPrincipal(
+                        texto: 'Guardar',
+                        icono: Icons.check_circle_outline,
+                        cargando: guardando,
+                        alPresionar: rutinaElegida == null
+                            ? null
+                            : () => guardar(nombreRutina: rutinaElegida),
+                      ),
+                      const SizedBox(height: 10),
+                      TextButton.icon(
+                        onPressed: guardando ? null : () => guardar(nombreRutina: null),
+                        icon: const Icon(Icons.auto_awesome_outlined),
+                        label: const Text('No lo se, que el analisis decida'),
+                      ),
+                    ],
                   ],
                 ),
               ),
