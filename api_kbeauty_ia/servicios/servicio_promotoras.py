@@ -26,11 +26,7 @@ def analizar_walkin(archivos):
     return analizar_imagenes_piel(imagenes)
 
 
-def _construir_rutina_manual(nombre_rutina):
-    nombre_rutina = (nombre_rutina or "").strip()
-    if not nombre_rutina:
-        respuesta_error("Debes indicar el nombre de la rutina para el modo manual", 422)
-
+def _construir_rutina_por_nombre(nombre_rutina):
     coincidencia = next(
         (rutina for rutina in listar_rutinas() if rutina.get("nombre") == nombre_rutina),
         None,
@@ -48,7 +44,7 @@ def _construir_rutina_manual(nombre_rutina):
         "criterios": {
             "tipo_piel": rutina.get("tipo_piel"),
             "condicion": rutina.get("condicion"),
-            "seleccion": "manual",
+            "seleccion": "confirmada_por_promotora",
         },
         "rutina": rutina,
         "productos": productos,
@@ -79,9 +75,12 @@ def guardar_analisis_promotora(datos):
     ejecutar("UPDATE analisis_piel SET origen = 'promotora' WHERE id = %s", (analisis["id"],))
     analisis["origen"] = "promotora"
 
-    modo_rutina = (datos.get("modo_rutina") or "automatica").strip().lower()
-    if modo_rutina == "manual":
-        recomendacion = _construir_rutina_manual(datos.get("rutina_nombre"))
+    # Si la promotora confirma la rutina (por nombre, de la lista del JSON) se
+    # usa esa tal cual. Si no sabe ("No lo se"), la condicion y el tipo de
+    # piel salen del mismo analisis de fotos.
+    rutina_nombre = (datos.get("rutina_nombre") or "").strip()
+    if rutina_nombre:
+        recomendacion = _construir_rutina_por_nombre(rutina_nombre)
     else:
         perfil_sintetico = {
             "tipo_piel": resultado_ia.get("tipo_piel_estimado"),
