@@ -75,7 +75,13 @@ class _PantallaEleccionRutinaState extends State<PantallaEleccionRutina> {
 
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => PantallaResultadoAnalisis(resultado: resultado)),
+        MaterialPageRoute(
+          builder: (_) => PantallaResultadoAnalisis(
+            resultado: resultado,
+            clienteNombre: widget.clienteNombre,
+            clienteTelefono: widget.clienteTelefono,
+          ),
+        ),
         (ruta) => false,
       );
     } catch (error) {

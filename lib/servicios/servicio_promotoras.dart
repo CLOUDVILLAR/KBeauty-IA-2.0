@@ -50,3 +50,17 @@ Future<Map<String, dynamic>> guardarAnalisisPromotora({
   final respuesta = await enviarPostPromotoras(rutaPromotorasGuardar, cuerpo);
   return Map<String, dynamic>.from(respuesta['datos'] ?? {});
 }
+
+Future<List<Map<String, dynamic>>> obtenerHistorialPromotoras({int limite = 50}) async {
+  final respuesta = await enviarGetPromotoras('$rutaPromotorasHistorial?limite=$limite');
+  final datos = respuesta['datos'];
+  if (datos is List) {
+    return datos.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  }
+  return [];
+}
+
+Future<Map<String, dynamic>> obtenerDetalleHistorialPromotora(String analisisId) async {
+  final respuesta = await enviarGetPromotoras('$rutaPromotorasHistorial/$analisisId');
+  return Map<String, dynamic>.from(respuesta['datos'] ?? {});
+}

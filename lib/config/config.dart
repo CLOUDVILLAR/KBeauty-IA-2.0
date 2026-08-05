@@ -55,6 +55,7 @@ const String promotorasAppKey = String.fromEnvironment(
 const String rutaPromotorasRutinas = '/promotoras/rutinas';
 const String rutaPromotorasAnalisis = '/promotoras/analisis';
 const String rutaPromotorasGuardar = '/promotoras/guardar';
+const String rutaPromotorasHistorial = '/promotoras/historial';
 
 String crearUrl(String ruta) => '$urlApi$ruta';
 String crearUrlVillarDo(String ruta) => '$urlVillarDo$ruta';

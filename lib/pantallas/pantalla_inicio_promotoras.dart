@@ -4,6 +4,7 @@ import '../tema/tema_app.dart';
 import '../utilidades/responsivo.dart';
 import '../widgets/boton_principal.dart';
 import 'pantalla_datos_cliente.dart';
+import 'pantalla_historial_promotoras.dart';
 
 /// Home de la app de promotoras: sin login, entra directo aqui.
 class PantallaInicioPromotoras extends StatelessWidget {
@@ -43,6 +44,14 @@ class PantallaInicioPromotoras extends StatelessWidget {
                   alPresionar: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const PantallaDatosCliente()),
                   ),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PantallaHistorialPromotoras()),
+                  ),
+                  icon: const Icon(Icons.history_rounded),
+                  label: const Text('Ver historial'),
                 ),
               ],
             ),

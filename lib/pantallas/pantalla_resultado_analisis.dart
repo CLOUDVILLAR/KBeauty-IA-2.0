@@ -7,8 +7,17 @@ import '../widgets/tarjeta_rutina.dart';
 
 class PantallaResultadoAnalisis extends StatelessWidget {
   final Map<String, dynamic> resultado;
+  // Solo la app de promotoras los pasa, para mostrar a que cliente
+  // walk-in pertenece este analisis. La app normal nunca los usa.
+  final String? clienteNombre;
+  final String? clienteTelefono;
 
-  const PantallaResultadoAnalisis({super.key, required this.resultado});
+  const PantallaResultadoAnalisis({
+    super.key,
+    required this.resultado,
+    this.clienteNombre,
+    this.clienteTelefono,
+  });
 
   static const Color rojoMarca = Color(0xFFDC1015);
   static const Color fondo = Color(0xFFFFFBFB);
@@ -254,6 +263,33 @@ class PantallaResultadoAnalisis extends StatelessWidget {
           ListView(
             padding: margenPantalla(context),
             children: [
+              if ((clienteNombre ?? '').trim().isNotEmpty) ...[
+                tarjetaBase(
+                  hijo: Row(
+                    children: [
+                      const Icon(Icons.person_outline, color: textoSecundario),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              clienteNombre!.trim(),
+                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                            ),
+                            if ((clienteTelefono ?? '').trim().isNotEmpty)
+                              Text(
+                                clienteTelefono!.trim(),
+                                style: const TextStyle(color: textoSecundario),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
               _TarjetaHeroResultado(
                 resumen: resumen,
                 estadoGeneral: estadoGeneral,
