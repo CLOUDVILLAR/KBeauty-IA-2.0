@@ -3,10 +3,19 @@ from typing import List, Optional
 from fastapi import APIRouter, Body, Depends, File, UploadFile
 
 from dependencias.autenticacion_promotoras import verificar_clave_promotoras
-from servicios.servicio_promotoras import analizar_walkin, guardar_analisis_promotora
+from servicios.servicio_promotoras import (
+    analizar_walkin,
+    guardar_analisis_promotora,
+    listar_rutinas_promotoras,
+)
 from utilidades.respuestas import respuesta_correcta, respuesta_error
 
 router = APIRouter(prefix="/promotoras", tags=["promotoras"])
+
+
+@router.get("/rutinas")
+def ruta_listado_rutinas(autorizado=Depends(verificar_clave_promotoras)):
+    return respuesta_correcta("Rutinas disponibles", listar_rutinas_promotoras())
 
 
 @router.post("/analisis")
