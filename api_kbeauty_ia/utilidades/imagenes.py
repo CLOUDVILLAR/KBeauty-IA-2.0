@@ -43,6 +43,13 @@ def es_extension_de_imagen(extension):
     return extension.lower() in EXTENSIONES_IMAGEN
 
 
+# Limite de lado mas largo antes de mandar la foto a OpenAI. Los modelos de
+# vision no ganan precision con fotos mas grandes que esto (las procesan en
+# tiles igual), y una foto sin este limite hace mas lenta la subida y el
+# analisis sin ningun beneficio real.
+LADO_MAXIMO_ANALISIS = 1600
+
+
 def convertir_a_jpeg(bytes_imagen, nombre_campo="imagen"):
     try:
         imagen = Image.open(io.BytesIO(bytes_imagen))
@@ -57,6 +64,9 @@ def convertir_a_jpeg(bytes_imagen, nombre_campo="imagen"):
             imagen = fondo
         else:
             imagen = imagen.convert("RGB")
+
+        if max(imagen.size) > LADO_MAXIMO_ANALISIS:
+            imagen.thumbnail((LADO_MAXIMO_ANALISIS, LADO_MAXIMO_ANALISIS), Image.LANCZOS)
 
         salida = io.BytesIO()
         imagen.save(salida, format="JPEG", quality=92, optimize=True)
