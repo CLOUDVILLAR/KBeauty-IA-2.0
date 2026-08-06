@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../servicios/servicio_promotoras.dart';
 import '../tema/tema_app.dart';
@@ -45,9 +44,6 @@ class _PantallaAnalizandoPromotorasState extends State<PantallaAnalizandoPromoto
   @override
   void initState() {
     super.initState();
-    // Splash de carga: se ve en pantalla completa, sin barra de estado ni
-    // barra de navegacion del sistema encima.
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _pulso = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1100),
@@ -57,7 +53,6 @@ class _PantallaAnalizandoPromotorasState extends State<PantallaAnalizandoPromoto
 
   @override
   void dispose() {
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _pulso.dispose();
     super.dispose();
   }
