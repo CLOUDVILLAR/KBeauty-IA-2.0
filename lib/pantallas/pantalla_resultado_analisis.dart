@@ -11,12 +11,18 @@ class PantallaResultadoAnalisis extends StatelessWidget {
   // walk-in pertenece este analisis. La app normal nunca los usa.
   final String? clienteNombre;
   final String? clienteTelefono;
+  // Idem: solo la app de promotoras lo pasa. Al terminar un analisis se
+  // vacia el stack de navegacion, asi que sin esto no habria forma de
+  // volver al inicio para atender al siguiente cliente. Recibe el context
+  // de ESTA pantalla (valido mientras se ve), no uno capturado antes.
+  final void Function(BuildContext context)? onVolverInicio;
 
   const PantallaResultadoAnalisis({
     super.key,
     required this.resultado,
     this.clienteNombre,
     this.clienteTelefono,
+    this.onVolverInicio,
   });
 
   static const Color rojoMarca = Color(0xFFDC1015);
@@ -256,6 +262,14 @@ class PantallaResultadoAnalisis extends StatelessWidget {
         foregroundColor: textoPrincipal,
         surfaceTintColor: Colors.white,
         elevation: 0,
+        actions: [
+          if (onVolverInicio != null)
+            TextButton.icon(
+              onPressed: () => onVolverInicio!(context),
+              icon: const Icon(Icons.home_outlined),
+              label: const Text('Inicio'),
+            ),
+        ],
       ),
       body: SafeArea(
         child: centrarContenido(

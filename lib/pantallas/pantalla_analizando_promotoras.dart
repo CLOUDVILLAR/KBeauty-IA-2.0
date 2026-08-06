@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../servicios/servicio_promotoras.dart';
 import '../tema/tema_app.dart';
+import 'pantalla_inicio_promotoras.dart';
 import 'pantalla_resultado_analisis.dart';
 
 /// Splash que envia las 3 fotos, guarda el analisis y muestra el resultado
@@ -87,6 +88,10 @@ class _PantallaAnalizandoPromotorasState extends State<PantallaAnalizandoPromoto
               resultado: resultado,
               clienteNombre: widget.clienteNombre,
               clienteTelefono: widget.clienteTelefono,
+              onVolverInicio: (contextResultado) => Navigator.of(contextResultado).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const PantallaInicioPromotoras()),
+                (ruta) => false,
+              ),
             ),
           ),
           (ruta) => false,
