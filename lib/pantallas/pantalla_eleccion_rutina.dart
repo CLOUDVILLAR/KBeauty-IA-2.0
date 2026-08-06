@@ -6,22 +6,21 @@ import '../widgets/boton_principal.dart';
 import '../widgets/mensaje_estado.dart';
 import '../widgets/selector_opcion.dart';
 import '../widgets/tarjeta_base.dart';
-import 'pantalla_resultado_analisis.dart';
+import 'pantalla_captura_promotoras.dart';
 
-/// Pregunta el tipo de piel de la persona mostrando los nombres reales de
-/// las rutinas del JSON (ej. "Piel sensible con melasma"), para que la
-/// promotora elija algo descriptivo y no un tipo generico. Si no lo sabe, la
-/// IA decide con el mismo analisis de fotos (tipo de piel y condicion).
+/// Pregunta el tipo de piel ANTES de tomar las fotos, mostrando los nombres
+/// reales de las rutinas del JSON (ej. "Piel sensible con melasma"). No
+/// guarda nada todavia: solo lleva la eleccion (o null si "No lo se") hasta
+/// la pantalla de captura, para que el analisis y el guardado se hagan
+/// juntos al final y se muestre el resultado completo de una sola vez.
 class PantallaEleccionRutina extends StatefulWidget {
   const PantallaEleccionRutina({
     super.key,
-    required this.resultadoIa,
     required this.clienteNombre,
     required this.clienteApellido,
     required this.clienteTelefono,
   });
 
-  final Map<String, dynamic> resultadoIa;
   final String clienteNombre;
   final String clienteApellido;
   final String clienteTelefono;
@@ -34,7 +33,6 @@ class _PantallaEleccionRutinaState extends State<PantallaEleccionRutina> {
   List<String> rutinas = [];
   String? rutinaElegida;
   bool cargandoRutinas = true;
-  bool guardando = false;
   String? errorCarga;
 
   @override
@@ -62,35 +60,17 @@ class _PantallaEleccionRutinaState extends State<PantallaEleccionRutina> {
     }
   }
 
-  Future<void> guardar({String? nombreRutina}) async {
-    setState(() => guardando = true);
-    try {
-      final resultado = await guardarAnalisisPromotora(
-        clienteNombre: widget.clienteNombre,
-        clienteApellido: widget.clienteApellido,
-        clienteTelefono: widget.clienteTelefono,
-        resultadoIa: widget.resultadoIa,
-        rutinaNombre: nombreRutina,
-      );
-
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => PantallaResultadoAnalisis(
-            resultado: resultado,
-            clienteNombre: widget.clienteNombre,
-            clienteTelefono: widget.clienteTelefono,
-          ),
+  void continuar({String? nombreRutina}) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PantallaCapturaPromotoras(
+          clienteNombre: widget.clienteNombre,
+          clienteApellido: widget.clienteApellido,
+          clienteTelefono: widget.clienteTelefono,
+          rutinaElegida: nombreRutina,
         ),
-        (ruta) => false,
-      );
-    } catch (error) {
-      if (mounted) {
-        mostrarMensaje(context, 'No se pudo guardar el analisis: $error');
-      }
-    } finally {
-      if (mounted) setState(() => guardando = false);
-    }
+      ),
+    );
   }
 
   @override
@@ -113,8 +93,9 @@ class _PantallaEleccionRutinaState extends State<PantallaEleccionRutina> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'La rutina se arma con el analisis de las fotos. Elige la opcion que '
-                      'mejor describe a la persona para afinar la recomendacion.',
+                      'La rutina se arma con el analisis de las fotos que vas a tomar. '
+                      'Elige la opcion que mejor describe a la persona para afinar la '
+                      'recomendacion.',
                     ),
                     const SizedBox(height: 18),
                     if (cargandoRutinas) cargandoCentro('Cargando opciones...'),
@@ -130,16 +111,15 @@ class _PantallaEleccionRutinaState extends State<PantallaEleccionRutina> {
                       ),
                       const SizedBox(height: 16),
                       botonPrincipal(
-                        texto: 'Guardar',
-                        icono: Icons.check_circle_outline,
-                        cargando: guardando,
+                        texto: 'Continuar a las fotos',
+                        icono: Icons.arrow_forward_rounded,
                         alPresionar: rutinaElegida == null
                             ? null
-                            : () => guardar(nombreRutina: rutinaElegida),
+                            : () => continuar(nombreRutina: rutinaElegida),
                       ),
                       const SizedBox(height: 10),
                       TextButton.icon(
-                        onPressed: guardando ? null : () => guardar(nombreRutina: null),
+                        onPressed: () => continuar(nombreRutina: null),
                         icon: const Icon(Icons.auto_awesome_outlined),
                         label: const Text('No lo se, que el analisis decida'),
                       ),

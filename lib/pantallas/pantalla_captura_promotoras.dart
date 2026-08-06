@@ -19,11 +19,15 @@ class PantallaCapturaPromotoras extends StatefulWidget {
     required this.clienteNombre,
     required this.clienteApellido,
     required this.clienteTelefono,
+    this.rutinaElegida,
   });
 
   final String clienteNombre;
   final String clienteApellido;
   final String clienteTelefono;
+  // Nombre de rutina elegido en la pantalla anterior, o null si la promotora
+  // eligio "No lo se" (en ese caso el analisis de las fotos decide solo).
+  final String? rutinaElegida;
 
   @override
   State<PantallaCapturaPromotoras> createState() => _PantallaCapturaPromotorasState();
@@ -95,6 +99,7 @@ class _PantallaCapturaPromotorasState extends State<PantallaCapturaPromotoras> {
           clienteNombre: widget.clienteNombre,
           clienteApellido: widget.clienteApellido,
           clienteTelefono: widget.clienteTelefono,
+          rutinaElegida: widget.rutinaElegida,
         ),
       ),
     );

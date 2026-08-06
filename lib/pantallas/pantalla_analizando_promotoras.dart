@@ -5,11 +5,12 @@ import 'package:flutter/services.dart';
 
 import '../servicios/servicio_promotoras.dart';
 import '../tema/tema_app.dart';
-import 'pantalla_eleccion_rutina.dart';
+import 'pantalla_resultado_analisis.dart';
 
-/// Splash que envia las 3 fotos al endpoint de promotoras y reintenta ante
-/// fallas de red. A diferencia de PantallaAnalizando, no hay sesion que pueda
-/// expirar: cualquier error se reintenta hasta que funcione.
+/// Splash que envia las 3 fotos, guarda el analisis y muestra el resultado
+/// completo de una sola vez. A diferencia de PantallaAnalizando, no hay
+/// sesion que pueda expirar: cualquier error (de la foto o del guardado) se
+/// reintenta el proceso completo hasta que funcione.
 class PantallaAnalizandoPromotoras extends StatefulWidget {
   const PantallaAnalizandoPromotoras({
     super.key,
@@ -19,6 +20,7 @@ class PantallaAnalizandoPromotoras extends StatefulWidget {
     required this.clienteNombre,
     required this.clienteApellido,
     required this.clienteTelefono,
+    this.rutinaElegida,
   });
 
   final File frente;
@@ -27,6 +29,7 @@ class PantallaAnalizandoPromotoras extends StatefulWidget {
   final String clienteNombre;
   final String clienteApellido;
   final String clienteTelefono;
+  final String? rutinaElegida;
 
   @override
   State<PantallaAnalizandoPromotoras> createState() => _PantallaAnalizandoPromotorasState();
@@ -68,15 +71,25 @@ class _PantallaAnalizandoPromotorasState extends State<PantallaAnalizandoPromoto
           ladoDerecho: widget.ladoDerecho,
         );
         if (!mounted) return;
-        Navigator.of(context).pushReplacement(
+
+        final resultado = await guardarAnalisisPromotora(
+          clienteNombre: widget.clienteNombre,
+          clienteApellido: widget.clienteApellido,
+          clienteTelefono: widget.clienteTelefono,
+          resultadoIa: resultadoIa,
+          rutinaNombre: widget.rutinaElegida,
+        );
+        if (!mounted) return;
+
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (_) => PantallaEleccionRutina(
-              resultadoIa: resultadoIa,
+            builder: (_) => PantallaResultadoAnalisis(
+              resultado: resultado,
               clienteNombre: widget.clienteNombre,
-              clienteApellido: widget.clienteApellido,
               clienteTelefono: widget.clienteTelefono,
             ),
           ),
+          (ruta) => false,
         );
         return;
       } catch (error) {

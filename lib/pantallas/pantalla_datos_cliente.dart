@@ -5,7 +5,7 @@ import '../widgets/boton_principal.dart';
 import '../widgets/campo_texto.dart';
 import '../widgets/mensaje_estado.dart';
 import '../widgets/tarjeta_base.dart';
-import 'pantalla_captura_promotoras.dart';
+import 'pantalla_eleccion_rutina.dart';
 
 /// Pide nombre y telefono del cliente walk-in ANTES de tomar las fotos, para
 /// validar el telefono temprano y no perder tiempo si es invalido.
@@ -45,7 +45,7 @@ class _PantallaDatosClienteState extends State<PantallaDatosCliente> {
 
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PantallaCapturaPromotoras(
+        builder: (_) => PantallaEleccionRutina(
           clienteNombre: nombre,
           clienteApellido: _apellidoControlador.text.trim(),
           clienteTelefono: telefono,
