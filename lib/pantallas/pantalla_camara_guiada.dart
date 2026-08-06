@@ -80,9 +80,12 @@ class _PantallaCamaraGuiadaState extends State<PantallaCamaraGuiada>
     if (mounted) setState(() => inicializando = true);
     await anterior?.dispose();
 
+    // El backend no redimensiona las fotos antes de mandarlas a OpenAI: una
+    // resolucion muy alta solo hace mas lenta la subida y el analisis, sin
+    // mejorar el resultado. "high" (~720p) es de sobra para el analisis de piel.
     final nuevo = CameraController(
       camaras[indice],
-      ResolutionPreset.veryHigh,
+      ResolutionPreset.high,
       enableAudio: false,
     );
 
