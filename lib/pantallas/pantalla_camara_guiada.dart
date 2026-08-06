@@ -60,12 +60,13 @@ class _PantallaCamaraGuiadaState extends State<PantallaCamaraGuiada>
       if (camaras.isEmpty) {
         error = 'No se encontró ninguna cámara en el dispositivo.';
       } else {
-        // La camara frontal es la mas comoda para autofotos del rostro.
-        var frontal = camaras.indexWhere(
-          (c) => c.lensDirection == CameraLensDirection.front,
+        // La promotora sostiene la tablet frente al cliente: la trasera
+        // apunta a la persona mientras la promotora ve la pantalla.
+        var trasera = camaras.indexWhere(
+          (c) => c.lensDirection == CameraLensDirection.back,
         );
-        if (frontal < 0) frontal = 0;
-        await _abrirCamara(frontal);
+        if (trasera < 0) trasera = 0;
+        await _abrirCamara(trasera);
       }
     } catch (_) {
       error = 'No se pudo abrir la cámara. Revisa el permiso de cámara de la app.';
