@@ -760,7 +760,7 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
     - empleado_filtro aplica solo a presenciales porque los analisis de app no tienen empleado.
     """
     filtro = (filtro or "todos").strip()
-    if filtro not in {"todos", "presencial_con_app", "presencial_sin_app", "app_cliente"}:
+    if filtro not in {"todos", "presencial_con_app", "presencial_sin_app", "app_cliente", "promotora"}:
         filtro = "todos"
     empleado_filtro = str(empleado_filtro or "").strip()
     fecha_desde = str(fecha_desde or "").strip()
@@ -783,9 +783,11 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
         "presencial_con_app": 0,
         "presencial_sin_app": 0,
         "app_cliente": 0,
+        "promotora": 0,
         "empleados_con_analisis": 0,
     }
     por_empleado = []
+    por_ip_promotora = []
     recientes = []
     empleados_opciones = []
 
@@ -846,19 +848,45 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
         if empleado_filtro:
             por_empleado = [e for e in por_empleado if str(e.get("empleado_ref") or "") == empleado_filtro]
 
-    # Los analisis de app no tienen empleado. Si el admin filtra por empleado,
-    # mostramos solo los presenciales de ese empleado.
+    # Los analisis de app (incluidas las promotoras) no tienen empleado. Si el
+    # admin filtra por empleado, mostramos solo los presenciales de ese empleado.
     if existe_app and not empleado_filtro:
         condiciones_app, params_app = _condiciones_fecha()
-        where_app = "WHERE " + " AND ".join(condiciones_app) if condiciones_app else ""
-        total_app = consultar_uno(f"SELECT COUNT(*)::int AS total FROM analisis_piel {where_app}", tuple(params_app))
+        where_app_cliente = " AND ".join(condiciones_app + ["origen IS DISTINCT FROM 'promotora'"])
+        total_app = consultar_uno(
+            f"SELECT COUNT(*)::int AS total FROM analisis_piel WHERE {where_app_cliente}", tuple(params_app)
+        )
         resumen["app_cliente"] = int((total_app or {}).get("total") or 0)
 
-    resumen["total"] = resumen["presencial_con_app"] + resumen["presencial_sin_app"] + resumen["app_cliente"]
+        condiciones_promo, params_promo = _condiciones_fecha()
+        where_promo = " AND ".join(condiciones_promo + ["origen = 'promotora'"])
+        total_promo = consultar_uno(
+            f"SELECT COUNT(*)::int AS total FROM analisis_piel WHERE {where_promo}", tuple(params_promo)
+        )
+        resumen["promotora"] = int((total_promo or {}).get("total") or 0)
+
+        condiciones_ip, params_ip = _condiciones_fecha()
+        where_ip = " AND ".join(condiciones_ip + ["origen = 'promotora'"])
+        por_ip_promotora = consultar_todos(
+            f"""
+            SELECT COALESCE(ip_origen, 'Sin IP registrada') AS ip_origen, COUNT(*)::int AS total
+            FROM analisis_piel
+            WHERE {where_ip}
+            GROUP BY 1
+            ORDER BY total DESC, ip_origen
+            """,
+            tuple(params_ip),
+        ) or []
+
+    resumen["total"] = (
+        resumen["presencial_con_app"] + resumen["presencial_sin_app"]
+        + resumen["app_cliente"] + resumen["promotora"]
+    )
     resumen["empleados_con_analisis"] = len([e for e in empleados_opciones if int(e.get("total") or 0) > 0])
 
     incluir_presenciales = filtro in ("todos", "presencial_con_app", "presencial_sin_app")
     incluir_app = filtro in ("todos", "app_cliente") and not empleado_filtro
+    incluir_promotora = filtro in ("todos", "promotora") and not empleado_filtro
     consultas = []
     params = []
 
@@ -896,8 +924,9 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
 
     if incluir_app and existe_app:
         condiciones_app_rec, params_app_rec = _condiciones_fecha()
+        condiciones_app_rec.append("origen IS DISTINCT FROM 'promotora'")
         params.extend(params_app_rec)
-        where_app_rec = "WHERE " + " AND ".join(condiciones_app_rec) if condiciones_app_rec else ""
+        where_app_rec = "WHERE " + " AND ".join(condiciones_app_rec)
         consultas.append(f"""
             SELECT
                 id::text AS id,
@@ -917,6 +946,32 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
                 resultado_completo AS valores_extraidos
             FROM analisis_piel
             {where_app_rec}
+        """)
+
+    if incluir_promotora and existe_app:
+        condiciones_promo_rec, params_promo_rec = _condiciones_fecha()
+        condiciones_promo_rec.append("origen = 'promotora'")
+        params.extend(params_promo_rec)
+        where_promo_rec = "WHERE " + " AND ".join(condiciones_promo_rec)
+        consultas.append(f"""
+            SELECT
+                id::text AS id,
+                'promotora' AS tipo,
+                'Promotora (walk-in)' AS etiqueta,
+                creado_en,
+                'completado' AS estado_procesamiento,
+                COALESCE(ip_origen, '')::text AS empleado_ref,
+                NULL::text AS empleado_villar_id,
+                villar_id::text AS villar_id,
+                cliente_nombre,
+                cliente_telefono,
+                COALESCE(resultado_completo->>'tipo_piel', resultado_completo->>'tipo_de_piel') AS tipo_piel_seleccionada,
+                COALESCE(resultado_completo->>'condicion_principal_detectada', resultado_completo->>'condicion', resultado_completo->>'condicion_principal') AS condicion_seleccionada,
+                NULL::text AS rutina_seleccionada,
+                NULL::text AS archivo_nombre,
+                resultado_completo AS valores_extraidos
+            FROM analisis_piel
+            {where_promo_rec}
         """)
 
     if consultas:
@@ -948,7 +1003,9 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
             fila["cliente_nombre"] = "Cliente sin app" if fila.get("tipo") == "presencial_sin_app" else "Cliente"
         if not fila.get("cliente_telefono"):
             fila["cliente_telefono"] = "-"
-        if fila.get("empleado_villar_id"):
+        if fila.get("tipo") == "promotora":
+            fila["empleado_nombre"] = f"IP {fila.get('empleado_ref')}" if fila.get("empleado_ref") else "IP sin registrar"
+        elif fila.get("empleado_villar_id"):
             info_emp = info_villar_cached(fila.get("empleado_villar_id"))
             fila["empleado_nombre"] = info_emp.get("nombre") or fila.get("empleado_ref") or "Empleado"
         elif fila.get("empleado_ref"):
@@ -974,6 +1031,7 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
         "fecha_hasta": fecha_hasta,
         "resumen": resumen,
         "por_empleado": por_empleado or [],
+        "por_ip_promotora": por_ip_promotora or [],
         "empleados_opciones": empleados_opciones or [],
         "recientes": recientes or [],
     }

@@ -52,7 +52,7 @@ def _construir_rutina_por_nombre(nombre_rutina):
     }
 
 
-def guardar_analisis_promotora(datos):
+def guardar_analisis_promotora(datos, ip_origen=None):
     nombre = (datos.get("cliente_nombre") or "").strip()
     telefono = (datos.get("cliente_telefono") or "").strip()
     if not nombre or not telefono:
@@ -75,14 +75,15 @@ def guardar_analisis_promotora(datos):
     ejecutar(
         """
         UPDATE analisis_piel
-        SET origen = 'promotora', cliente_nombre = %s, cliente_telefono = %s
+        SET origen = 'promotora', cliente_nombre = %s, cliente_telefono = %s, ip_origen = %s
         WHERE id = %s
         """,
-        (nombre, telefono, analisis["id"]),
+        (nombre, telefono, ip_origen, analisis["id"]),
     )
     analisis["origen"] = "promotora"
     analisis["cliente_nombre"] = nombre
     analisis["cliente_telefono"] = telefono
+    analisis["ip_origen"] = ip_origen
 
     # Si la promotora confirma la rutina (por nombre, de la lista del JSON) se
     # usa esa tal cual. Si no sabe ("No lo se"), la condicion y el tipo de

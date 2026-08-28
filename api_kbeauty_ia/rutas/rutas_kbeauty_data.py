@@ -702,6 +702,7 @@ def vista_dashboard_admin(
         ("presencial_con_app", "Presenciales con app"),
         ("presencial_sin_app", "Presenciales sin app"),
         ("app_cliente", "Hechos en la app"),
+        ("promotora", "Promotoras (walk-in)"),
     ]
     filtros_html = "".join([
         f"<a class='dash-filter {activo(valor)}' href='{qs(valor_filtro=valor)}'>{escape(texto)}</a>"
@@ -735,6 +736,7 @@ def vista_dashboard_admin(
             ("presencial_con_app", "Presenciales con app"),
             ("presencial_sin_app", "Presenciales sin app"),
             ("app_cliente", "Hechos en la app"),
+            ("promotora", "Promotoras (walk-in)"),
         ]
     ])
 
@@ -749,6 +751,18 @@ def vista_dashboard_admin(
         </div>
         """ for e in empleados_chart[:12]
     ]) or "<p class='small'>No hay datos de empleados para este filtro.</p>"
+
+    ip_promotoras_chart = dashboard.get("por_ip_promotora") or []
+    max_ip = max([int(i.get("total") or 0) for i in ip_promotoras_chart] or [1])
+    barras_ip_promotoras = "".join([
+        f"""
+        <div class='employee-bar'>
+          <div class='employee-name'><b>{escape(str(i.get('ip_origen') or 'Sin IP registrada'))}</b></div>
+          <div class='employee-track'><span style='width:{round((int(i.get('total') or 0) / max_ip) * 100, 2)}%'></span></div>
+          <div class='employee-total'>{int(i.get('total') or 0)}</div>
+        </div>
+        """ for i in ip_promotoras_chart[:12]
+    ]) or "<p class='small'>Todavía no hay análisis de promotoras registrados con IP para este filtro.</p>"
 
     filas_recientes = "".join([
         f"""
@@ -778,7 +792,7 @@ def vista_dashboard_admin(
       .dash-hero h1,.dash-hero p {{ color:#fff; position:relative; z-index:1; }}
       .dash-top-actions {{ position:relative; z-index:1; display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }}
       .dash-link {{ display:inline-flex; align-items:center; justify-content:center; padding:12px 16px; border-radius:16px; text-decoration:none; font-weight:900; color:#f51d37; background:#fff; box-shadow:0 12px 26px rgba(43,42,49,.12); }}
-      .dash-grid {{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:20px; }}
+      .dash-grid {{ display:grid; grid-template-columns:repeat(6,1fr); gap:14px; margin-bottom:20px; }}
       .dash-card {{ background:#fff; border:1px solid #f0d7dc; border-radius:22px; padding:18px; box-shadow:0 16px 34px rgba(20,36,66,.07); }}
       .dash-card small {{ display:block; color:#7d7680; font-weight:850; margin-bottom:8px; }}
       .dash-card b {{ font-size:30px; color:#221f27; }}
@@ -800,6 +814,7 @@ def vista_dashboard_admin(
       .dash-badge.presencial_con_app {{ background:#e7fff2; color:#047857; }}
       .dash-badge.presencial_sin_app {{ background:#fff0f3; color:#be123c; }}
       .dash-badge.app_cliente {{ background:#eef2ff; color:#4338ca; }}
+      .dash-badge.promotora {{ background:#fff7e6; color:#b45309; }}
       table td, table th {{ vertical-align:top; }}
       @media(max-width:1050px) {{ .dash-grid {{ grid-template-columns:repeat(2,1fr); }} .chart-layout {{ grid-template-columns:1fr; }} }}
       @media(max-width:650px) {{ .dash-grid,.filter-grid {{ grid-template-columns:1fr; }} .chart-row,.employee-bar {{ grid-template-columns:1fr; }} .chart-value,.employee-total {{ text-align:left; }} }}
@@ -807,7 +822,7 @@ def vista_dashboard_admin(
 
     <div class='hero dash-hero'>
       <h1>Dashboard de análisis</h1>
-      <p>Resumen separado por presenciales con app, presenciales sin app y análisis hechos por clientes desde la app.</p>
+      <p>Resumen separado por presenciales con app, presenciales sin app, análisis hechos por clientes desde la app y walk-ins de promotoras.</p>
       <div class='dash-top-actions'>
         <a class='dash-link' href='/kbeauty-data/admin'>Volver a admin</a>
         <a class='dash-link' href='/kbeauty-data/empleados'>Vista empleados</a>
@@ -820,6 +835,7 @@ def vista_dashboard_admin(
       <div class='dash-card'><small>Presenciales con app</small><b>{int(resumen.get('presencial_con_app') or 0)}</b></div>
       <div class='dash-card'><small>Presenciales sin app</small><b>{int(resumen.get('presencial_sin_app') or 0)}</b></div>
       <div class='dash-card'><small>Hechos en la app</small><b>{int(resumen.get('app_cliente') or 0)}</b></div>
+      <div class='dash-card'><small>Promotoras (walk-in)</small><b>{int(resumen.get('promotora') or 0)}</b></div>
       <div class='dash-card'><small>Empleados con análisis</small><b>{int(resumen.get('empleados_con_analisis') or 0)}</b></div>
     </div>
 
@@ -855,6 +871,12 @@ def vista_dashboard_admin(
         <h2>Análisis por empleado</h2>
         {barras_empleados}
       </div>
+    </div>
+
+    <div class='dash-panel'>
+      <h2>Promotoras (walk-in) por IP</h2>
+      <p class='small'>Cuenta los análisis de promotoras agrupados por la IP pública desde la que se hicieron. Si varias tablets comparten el WiFi de una misma tienda, van a aparecer bajo la misma IP — esto aproxima "por ubicación", no siempre "por tablet".</p>
+      {barras_ip_promotoras}
     </div>
 
     <div class='dash-panel'>
