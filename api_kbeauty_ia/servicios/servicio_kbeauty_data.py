@@ -787,7 +787,6 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
         "empleados_con_analisis": 0,
     }
     por_empleado = []
-    por_ip_promotora = []
     recientes = []
     empleados_opciones = []
 
@@ -864,19 +863,6 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
             f"SELECT COUNT(*)::int AS total FROM analisis_piel WHERE {where_promo}", tuple(params_promo)
         )
         resumen["promotora"] = int((total_promo or {}).get("total") or 0)
-
-        condiciones_ip, params_ip = _condiciones_fecha()
-        where_ip = " AND ".join(condiciones_ip + ["origen = 'promotora'"])
-        por_ip_promotora = consultar_todos(
-            f"""
-            SELECT COALESCE(ip_origen, 'Sin IP registrada') AS ip_origen, COUNT(*)::int AS total
-            FROM analisis_piel
-            WHERE {where_ip}
-            GROUP BY 1
-            ORDER BY total DESC, ip_origen
-            """,
-            tuple(params_ip),
-        ) or []
 
     resumen["total"] = (
         resumen["presencial_con_app"] + resumen["presencial_sin_app"]
@@ -960,7 +946,7 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
                 'Promotora (walk-in)' AS etiqueta,
                 creado_en,
                 'completado' AS estado_procesamiento,
-                COALESCE(ip_origen, '')::text AS empleado_ref,
+                ''::text AS empleado_ref,
                 NULL::text AS empleado_villar_id,
                 villar_id::text AS villar_id,
                 cliente_nombre,
@@ -1004,7 +990,7 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
         if not fila.get("cliente_telefono"):
             fila["cliente_telefono"] = "-"
         if fila.get("tipo") == "promotora":
-            fila["empleado_nombre"] = f"IP {fila.get('empleado_ref')}" if fila.get("empleado_ref") else "IP sin registrar"
+            fila["empleado_nombre"] = "Promotora"
         elif fila.get("empleado_villar_id"):
             info_emp = info_villar_cached(fila.get("empleado_villar_id"))
             fila["empleado_nombre"] = info_emp.get("nombre") or fila.get("empleado_ref") or "Empleado"
@@ -1031,7 +1017,6 @@ def obtener_dashboard_analisis_admin(filtro="todos", empleado_filtro="", fecha_d
         "fecha_hasta": fecha_hasta,
         "resumen": resumen,
         "por_empleado": por_empleado or [],
-        "por_ip_promotora": por_ip_promotora or [],
         "empleados_opciones": empleados_opciones or [],
         "recientes": recientes or [],
     }

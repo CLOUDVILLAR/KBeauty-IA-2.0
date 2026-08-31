@@ -41,6 +41,7 @@ from servicios.servicio_odoo import (
     buscar_partners_clientes_por_telefono_autocomplete,
 )
 from servicios.servicio_usuarios import obtener_roles_usuario
+from servicios.servicio_promotoras import obtener_historial_promotoras
 from utilidades.respuestas import respuesta_correcta, respuesta_error
 
 router = APIRouter(tags=["KBEAUTY-DATA"])
@@ -377,6 +378,7 @@ def _html_base(titulo, contenido, usuario=None, mostrar_nav=True):
       <nav>
         <a href="/kbeauty-data/admin">Admin</a>
         <a href="/kbeauty-data/admin/dashboard">Dashboard</a>
+        <a href="/kbeauty-data/admin/promotoras">Promotoras</a>
         <a href="/kbeauty-data/empleados">Empleados</a>
         <a href="/docs">Docs API</a>
         <div class="right">{sesion}</div>
@@ -752,18 +754,6 @@ def vista_dashboard_admin(
         """ for e in empleados_chart[:12]
     ]) or "<p class='small'>No hay datos de empleados para este filtro.</p>"
 
-    ip_promotoras_chart = dashboard.get("por_ip_promotora") or []
-    max_ip = max([int(i.get("total") or 0) for i in ip_promotoras_chart] or [1])
-    barras_ip_promotoras = "".join([
-        f"""
-        <div class='employee-bar'>
-          <div class='employee-name'><b>{escape(str(i.get('ip_origen') or 'Sin IP registrada'))}</b></div>
-          <div class='employee-track'><span style='width:{round((int(i.get('total') or 0) / max_ip) * 100, 2)}%'></span></div>
-          <div class='employee-total'>{int(i.get('total') or 0)}</div>
-        </div>
-        """ for i in ip_promotoras_chart[:12]
-    ]) or "<p class='small'>Todavía no hay análisis de promotoras registrados con IP para este filtro.</p>"
-
     filas_recientes = "".join([
         f"""
         <tr>
@@ -827,6 +817,7 @@ def vista_dashboard_admin(
         <a class='dash-link' href='/kbeauty-data/admin'>Volver a admin</a>
         <a class='dash-link' href='/kbeauty-data/empleados'>Vista empleados</a>
         <a class='dash-link' href='/kbeauty-data/admin/estadisticas'>Estadísticas</a>
+        <a class='dash-link' href='/kbeauty-data/admin/promotoras'>Promotoras</a>
       </div>
     </div>
 
@@ -874,12 +865,6 @@ def vista_dashboard_admin(
     </div>
 
     <div class='dash-panel'>
-      <h2>Promotoras (walk-in) por IP</h2>
-      <p class='small'>Cuenta los análisis de promotoras agrupados por la IP pública desde la que se hicieron. Si varias tablets comparten el WiFi de una misma tienda, van a aparecer bajo la misma IP — esto aproxima "por ubicación", no siempre "por tablet".</p>
-      {barras_ip_promotoras}
-    </div>
-
-    <div class='dash-panel'>
       <h2>Registros recientes</h2>
       <p class='small'>Incluye la rutina/tipo de piel elegido en el flujo sin app cuando está disponible.</p>
       <table>
@@ -897,6 +882,55 @@ def vista_dashboard_admin(
     </script>
     """
     return HTMLResponse(_html_base("Dashboard KBEAUTY-DATA", contenido, usuario))
+
+
+@router.get("/kbeauty-data/admin/promotoras", response_class=HTMLResponse)
+def vista_promotoras_admin(request: Request, limite: int = Query(200, ge=1, le=1000)):
+    usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/admin/promotoras")
+    if redireccion:
+        return redireccion
+    if not usuario_tiene_rol(usuario, ROLES_ADMIN):
+        return HTMLResponse(_html_base("Sin permiso", "<div class='card'><h1>Acceso denegado</h1><p>Tu usuario no tiene rol admin_kbeauty, admin, administrador o developer.</p></div>", usuario), status_code=403)
+
+    analisis = obtener_historial_promotoras(limite)
+
+    def fmt_fecha(valor):
+        if not valor:
+            return "-"
+        try:
+            return valor.strftime("%d/%m/%Y %I:%M %p")
+        except Exception:
+            return str(valor)
+
+    filas = "".join([
+        f"""
+        <tr>
+          <td><b>{escape(a.get('cliente_nombre') or 'Cliente')}</b><br><span class='small'>{escape(a.get('cliente_telefono') or '-')}</span></td>
+          <td>{escape(fmt_fecha(a.get('creado_en')))}</td>
+          <td><b>{escape(a.get('tono_piel') or '-')}</b><br><span class='small'>{escape(a.get('condicion_principal_detectada') or '')}</span></td>
+          <td>{escape(a.get('resumen_general') or '-')}</td>
+        </tr>
+        """ for a in analisis
+    ]) or "<tr><td colspan='4' class='small'>Todavía no hay análisis hechos por promotoras.</td></tr>"
+
+    contenido = f"""
+    <div class='hero'>
+      <h1>Promotoras (walk-in)</h1>
+      <p>Análisis hechos desde la app de promotoras en tablets, sin login del cliente. Total mostrado: {len(analisis)} (límite {limite}).</p>
+      <div class='dash-top-actions' style='display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;'>
+        <a class='dash-link' href='/kbeauty-data/admin/dashboard' style='display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;text-decoration:none;font-weight:900;color:#f51d37;background:#fff;box-shadow:0 12px 26px rgba(43,42,49,.12);'>Ir al dashboard</a>
+      </div>
+    </div>
+
+    <div class='dash-panel' style='background:rgba(255,255,255,.86); border:1px solid rgba(240,215,220,.9); border-radius:28px; padding:22px; box-shadow:0 22px 55px rgba(20,36,66,.08); margin-top:22px;'>
+      <h2>Últimos análisis de promotoras</h2>
+      <table>
+        <thead><tr><th>Cliente</th><th>Fecha</th><th>Tipo piel / condición</th><th>Resumen</th></tr></thead>
+        <tbody>{filas}</tbody>
+      </table>
+    </div>
+    """
+    return HTMLResponse(_html_base("Promotoras KBEAUTY-DATA", contenido, usuario))
 
 
 @router.get("/kbeauty-data/admin/estadisticas", response_class=HTMLResponse)

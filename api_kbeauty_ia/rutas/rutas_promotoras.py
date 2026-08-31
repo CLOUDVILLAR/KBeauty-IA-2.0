@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Body, Depends, File, Query, Request, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Query, UploadFile
 
 from dependencias.autenticacion_promotoras import verificar_clave_promotoras
 from servicios.servicio_promotoras import (
@@ -43,13 +43,8 @@ def ruta_analizar_walkin(
 
 
 @router.post("/guardar")
-def ruta_guardar_analisis(
-    request: Request,
-    datos: dict = Body(...),
-    autorizado=Depends(verificar_clave_promotoras),
-):
-    ip_origen = request.client.host if request.client else None
-    resultado = guardar_analisis_promotora(datos, ip_origen=ip_origen)
+def ruta_guardar_analisis(datos: dict = Body(...), autorizado=Depends(verificar_clave_promotoras)):
+    resultado = guardar_analisis_promotora(datos)
     return respuesta_correcta("Analisis de promotora guardado correctamente", resultado)
 
 
