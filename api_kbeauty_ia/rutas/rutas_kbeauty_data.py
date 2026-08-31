@@ -41,7 +41,7 @@ from servicios.servicio_odoo import (
     buscar_partners_clientes_por_telefono_autocomplete,
 )
 from servicios.servicio_usuarios import obtener_roles_usuario
-from servicios.servicio_promotoras import obtener_historial_promotoras
+from servicios.servicio_promotoras import obtener_historial_promotoras, obtener_resumen_por_promotora
 from utilidades.respuestas import respuesta_correcta, respuesta_error
 
 router = APIRouter(tags=["KBEAUTY-DATA"])
@@ -885,14 +885,20 @@ def vista_dashboard_admin(
 
 
 @router.get("/kbeauty-data/admin/promotoras", response_class=HTMLResponse)
-def vista_promotoras_admin(request: Request, limite: int = Query(200, ge=1, le=1000)):
+def vista_promotoras_admin(
+    request: Request,
+    limite: int = Query(200, ge=1, le=1000),
+    promotora: str = Query(""),
+):
     usuario, redireccion = _usuario_web_o_redirect(request, "/kbeauty-data/admin/promotoras")
     if redireccion:
         return redireccion
     if not usuario_tiene_rol(usuario, ROLES_ADMIN):
         return HTMLResponse(_html_base("Sin permiso", "<div class='card'><h1>Acceso denegado</h1><p>Tu usuario no tiene rol admin_kbeauty, admin, administrador o developer.</p></div>", usuario), status_code=403)
 
-    analisis = obtener_historial_promotoras(limite)
+    promotora_actual = (promotora or "").strip()
+    resumen_por_promotora = obtener_resumen_por_promotora()
+    analisis = obtener_historial_promotoras(limite, etiqueta_filtro=promotora_actual or None)
 
     def fmt_fecha(valor):
         if not valor:
@@ -902,30 +908,54 @@ def vista_promotoras_admin(request: Request, limite: int = Query(200, ge=1, le=1
         except Exception:
             return str(valor)
 
+    def qs_filtro(etiqueta):
+        return f"/kbeauty-data/admin/promotoras?promotora={quote(etiqueta)}" if etiqueta else "/kbeauty-data/admin/promotoras"
+
+    def _chip_filtro(etiqueta, texto):
+        activo = promotora_actual == etiqueta
+        fondo = "linear-gradient(135deg,#f51d37,#ff6475)" if activo else "#fff"
+        color = "#fff" if activo else "#382f36"
+        return f"<a class='dash-filter' href='{qs_filtro(etiqueta)}' style='padding:10px 14px;border-radius:999px;text-decoration:none;background:{fondo};color:{color};font-weight:900;border:1px solid #f0d7dc;'>{escape(texto)}</a>"
+
+    filtros_html = _chip_filtro("", "Todas") + "".join([
+        _chip_filtro(r.get("etiqueta") or "", f"{r.get('etiqueta') or ''} · {int(r.get('total') or 0)}")
+        for r in resumen_por_promotora
+    ])
+
     filas = "".join([
         f"""
         <tr>
           <td><b>{escape(a.get('cliente_nombre') or 'Cliente')}</b><br><span class='small'>{escape(a.get('cliente_telefono') or '-')}</span></td>
+          <td><span class='dash-badge promotora'>{escape(a.get('etiqueta_promotora') or 'Sin dispositivo registrado')}</span></td>
           <td>{escape(fmt_fecha(a.get('creado_en')))}</td>
           <td><b>{escape(a.get('tono_piel') or '-')}</b><br><span class='small'>{escape(a.get('condicion_principal_detectada') or '')}</span></td>
           <td>{escape(a.get('resumen_general') or '-')}</td>
         </tr>
         """ for a in analisis
-    ]) or "<tr><td colspan='4' class='small'>Todavía no hay análisis hechos por promotoras.</td></tr>"
+    ]) or "<tr><td colspan='5' class='small'>Todavía no hay análisis hechos por promotoras para este filtro.</td></tr>"
 
     contenido = f"""
+    <style>
+      .dash-badge {{ display:inline-block; padding:7px 10px; border-radius:999px; font-size:12px; font-weight:950; background:#eef3fa; color:#334155; white-space:nowrap; }}
+      .dash-badge.promotora {{ background:#fff7e6; color:#b45309; }}
+    </style>
     <div class='hero'>
       <h1>Promotoras (walk-in)</h1>
-      <p>Análisis hechos desde la app de promotoras en tablets, sin login del cliente. Total mostrado: {len(analisis)} (límite {limite}).</p>
+      <p>Análisis hechos desde la app de promotoras en tablets, sin login del cliente. Cada IP nueva se etiqueta automáticamente como "Promotora N" la primera vez que analiza. Mostrando {len(analisis)} (límite {limite}).</p>
       <div class='dash-top-actions' style='display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;'>
         <a class='dash-link' href='/kbeauty-data/admin/dashboard' style='display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;text-decoration:none;font-weight:900;color:#f51d37;background:#fff;box-shadow:0 12px 26px rgba(43,42,49,.12);'>Ir al dashboard</a>
       </div>
     </div>
 
     <div class='dash-panel' style='background:rgba(255,255,255,.86); border:1px solid rgba(240,215,220,.9); border-radius:28px; padding:22px; box-shadow:0 22px 55px rgba(20,36,66,.08); margin-top:22px;'>
-      <h2>Últimos análisis de promotoras</h2>
+      <h2>Filtrar por promotora</h2>
+      <div style='display:flex;flex-wrap:wrap;gap:10px;'>{filtros_html}</div>
+    </div>
+
+    <div class='dash-panel' style='background:rgba(255,255,255,.86); border:1px solid rgba(240,215,220,.9); border-radius:28px; padding:22px; box-shadow:0 22px 55px rgba(20,36,66,.08); margin-top:22px;'>
+      <h2>Análisis</h2>
       <table>
-        <thead><tr><th>Cliente</th><th>Fecha</th><th>Tipo piel / condición</th><th>Resumen</th></tr></thead>
+        <thead><tr><th>Cliente</th><th>Promotora</th><th>Fecha</th><th>Tipo piel / condición</th><th>Resumen</th></tr></thead>
         <tbody>{filas}</tbody>
       </table>
     </div>

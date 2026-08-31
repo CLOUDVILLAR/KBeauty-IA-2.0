@@ -17,6 +17,81 @@ from utilidades.imagenes import leer_y_normalizar_imagenes
 from utilidades.respuestas import respuesta_error
 
 
+def _asegurar_tablas_dispositivos_promotoras():
+    """Tablas propias (no analisis_piel) para no depender de ALTER TABLE.
+
+    analisis_piel es propiedad del rol postgres en produccion y kbeauty_user
+    (el rol que usa la API) no puede alterarla ahi. Estas tablas nuevas las
+    crea kbeauty_user, asi que son suyas y no tienen ese problema.
+    """
+    ejecutar(
+        """
+        CREATE TABLE IF NOT EXISTS promotoras_dispositivos (
+            id SERIAL PRIMARY KEY,
+            ip_origen VARCHAR(64) UNIQUE NOT NULL,
+            etiqueta VARCHAR(50) NOT NULL,
+            creado_en TIMESTAMP NOT NULL DEFAULT now()
+        )
+        """
+    )
+    ejecutar(
+        """
+        CREATE TABLE IF NOT EXISTS promotoras_analisis_ip (
+            analisis_id UUID PRIMARY KEY,
+            ip_origen VARCHAR(64) NOT NULL,
+            creado_en TIMESTAMP NOT NULL DEFAULT now()
+        )
+        """
+    )
+
+
+def _etiqueta_para_ip(ip_origen):
+    existente = consultar_uno(
+        "SELECT etiqueta FROM promotoras_dispositivos WHERE ip_origen = %s", (ip_origen,)
+    )
+    if existente:
+        return existente["etiqueta"]
+
+    total = consultar_uno("SELECT COUNT(*)::int AS total FROM promotoras_dispositivos")
+    etiqueta = f"Promotora {(total or {}).get('total', 0) + 1}"
+    creado = ejecutar(
+        """
+        INSERT INTO promotoras_dispositivos (ip_origen, etiqueta)
+        VALUES (%s, %s)
+        ON CONFLICT (ip_origen) DO NOTHING
+        RETURNING etiqueta
+        """,
+        (ip_origen, etiqueta),
+        retornar=True,
+    )
+    if creado:
+        return creado["etiqueta"]
+
+    # Otra request en paralelo gano la carrera y ya registro esta IP.
+    existente = consultar_uno(
+        "SELECT etiqueta FROM promotoras_dispositivos WHERE ip_origen = %s", (ip_origen,)
+    )
+    return (existente or {}).get("etiqueta") or etiqueta
+
+
+def registrar_ip_promotora(analisis_id, ip_origen):
+    ip_origen = (ip_origen or "").strip()
+    if not ip_origen:
+        return None
+
+    _asegurar_tablas_dispositivos_promotoras()
+    etiqueta = _etiqueta_para_ip(ip_origen)
+    ejecutar(
+        """
+        INSERT INTO promotoras_analisis_ip (analisis_id, ip_origen)
+        VALUES (%s, %s)
+        ON CONFLICT (analisis_id) DO NOTHING
+        """,
+        (analisis_id, ip_origen),
+    )
+    return etiqueta
+
+
 def listar_rutinas_promotoras():
     return obtener_resumen_rutinas()
 
@@ -52,7 +127,7 @@ def _construir_rutina_por_nombre(nombre_rutina):
     }
 
 
-def guardar_analisis_promotora(datos):
+def guardar_analisis_promotora(datos, ip_origen=None):
     nombre = (datos.get("cliente_nombre") or "").strip()
     telefono = (datos.get("cliente_telefono") or "").strip()
     if not nombre or not telefono:
@@ -83,6 +158,7 @@ def guardar_analisis_promotora(datos):
     analisis["origen"] = "promotora"
     analisis["cliente_nombre"] = nombre
     analisis["cliente_telefono"] = telefono
+    analisis["etiqueta_promotora"] = registrar_ip_promotora(analisis["id"], ip_origen)
 
     # Si la promotora confirma la rutina (por nombre, de la lista del JSON) se
     # usa esa tal cual. Si no sabe ("No lo se"), la condicion y el tipo de
@@ -108,17 +184,44 @@ def guardar_analisis_promotora(datos):
     }
 
 
-def obtener_historial_promotoras(limite=50):
+def obtener_historial_promotoras(limite=50, etiqueta_filtro=None):
+    _asegurar_tablas_dispositivos_promotoras()
+    condiciones = ["ap.origen = 'promotora'"]
+    params = []
+    if etiqueta_filtro:
+        condiciones.append("pd.etiqueta = %s")
+        params.append(etiqueta_filtro)
+    params.append(limite)
     return consultar_todos(
-        """
-        SELECT id, creado_en, cliente_nombre, cliente_telefono,
-               resumen_general, tono_piel, condicion_principal_detectada
-        FROM analisis_piel
-        WHERE origen = 'promotora'
-        ORDER BY creado_en DESC
+        f"""
+        SELECT ap.id, ap.creado_en, ap.cliente_nombre, ap.cliente_telefono,
+               ap.resumen_general, ap.tono_piel, ap.condicion_principal_detectada,
+               COALESCE(pd.etiqueta, 'Sin dispositivo registrado') AS etiqueta_promotora
+        FROM analisis_piel ap
+        LEFT JOIN promotoras_analisis_ip pai ON pai.analisis_id = ap.id
+        LEFT JOIN promotoras_dispositivos pd ON pd.ip_origen = pai.ip_origen
+        WHERE {" AND ".join(condiciones)}
+        ORDER BY ap.creado_en DESC
         LIMIT %s
         """,
-        (limite,),
+        tuple(params),
+    )
+
+
+def obtener_resumen_por_promotora():
+    _asegurar_tablas_dispositivos_promotoras()
+    return consultar_todos(
+        """
+        SELECT COALESCE(pd.etiqueta, 'Sin dispositivo registrado') AS etiqueta,
+               COUNT(*)::int AS total,
+               MAX(ap.creado_en) AS ultimo_analisis
+        FROM analisis_piel ap
+        LEFT JOIN promotoras_analisis_ip pai ON pai.analisis_id = ap.id
+        LEFT JOIN promotoras_dispositivos pd ON pd.ip_origen = pai.ip_origen
+        WHERE ap.origen = 'promotora'
+        GROUP BY 1
+        ORDER BY total DESC, etiqueta
+        """
     )
 
 
